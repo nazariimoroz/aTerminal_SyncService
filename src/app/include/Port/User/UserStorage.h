@@ -13,7 +13,7 @@ namespace Port::User
     public:
         virtual ~IUserStorage();
 
-        virtual std::optional<Domain::User> findById(const uuids::uuid& userId) = 0;
+        virtual std::optional<Domain::User> findById(const int& userId) = 0;
         virtual std::optional<Domain::User> findByEmail(const std::string& email) = 0;
         virtual bool existsByEmail(const std::string& userId) = 0;
     };

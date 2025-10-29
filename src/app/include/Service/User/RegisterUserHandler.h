@@ -15,14 +15,13 @@ namespace Service::User
 {
     struct RegisterUserResult
     {
-        std::string UserId;
-        std::string Email;
+        int userId;
     };
 
     struct RegisterUserCommand
     {
-        std::string Email;
-        std::string RawPassword;
+        std::string email;
+        std::string rawPassword;
 
         using Result = RegisterUserResult;
     };
@@ -31,9 +30,9 @@ namespace Service::User
     {
     public:
         explicit RegisterUserHandler(
-            std::shared_ptr<Port::User::IUserUpdatableStorage> UserStorage);
+            std::shared_ptr<Port::User::IUserUpdatableStorage> userStorage);
 
-        RegisterUserResult execute(const RegisterUserCommand& Command);
+        RegisterUserResult execute(const RegisterUserCommand& command);
 
     protected:
         std::shared_ptr<Port::User::IUserUpdatableStorage> _userStorage;

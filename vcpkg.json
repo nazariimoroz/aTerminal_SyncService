@@ -16,6 +16,9 @@
     },
     {
       "name" : "stduuid"
+    },
+    {
+      "name" : "libsodium"
     }
   ]
 }

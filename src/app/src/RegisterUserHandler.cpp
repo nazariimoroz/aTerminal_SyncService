@@ -2,23 +2,37 @@
 
 #include <stdexcept>
 
+#include "Port/UnitOfWork.h"
 #include "Port/User/UserUpdatableStorage.h"
 
 using namespace Service::User;
 
-RegisterUserHandler::RegisterUserHandler(std::shared_ptr<Port::User::IUserUpdatableStorage> UserStorage) :
-    _userStorage(std::move(UserStorage))
+RegisterUserHandler::RegisterUserHandler(std::shared_ptr<Port::User::IUserUpdatableStorage> userStorage) :
+    _userStorage(std::move(userStorage))
 {
 }
 
-RegisterUserResult RegisterUserHandler::execute(const RegisterUserCommand& Command)
+RegisterUserResult RegisterUserHandler::execute(const RegisterUserCommand& command)
 {
     const auto us = getUserStorage();
     auto uow = us->beginWork();
 
-    Domain::User
+    Domain::User user;
+    try
+    {
+        user.setEmail(command.email);
 
-    us->add()
+        us->add(user);
+    }
+    catch (std::exception& exception)
+    {
+        uow->rollback();
+        throw;
+    }
 
-    return RegisterUserResult{};
+    uow->commit();
+
+    return RegisterUserResult{
+        .userId = user.getId(),
+    };
 }
