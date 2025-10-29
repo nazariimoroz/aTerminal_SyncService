@@ -1,21 +1,23 @@
 #pragma once
 #include <Poco/Net/HTTPRequestHandler.h>
 
-namespace Api
+#include "Defines.h"
+#include "rfl/patterns.hpp"
+
+namespace Rest::Controller
 {
     struct RegisterUserDto
     {
-        std::string email;
-        std::string password;
+        rfl::Email email;
+        Defines::Password password;
     };
 
-    class UserController : public Poco::Net::HTTPRequestHandler {
+    class UserController : public Poco::Net::HTTPRequestHandler
+    {
     public:
-        void handleRequest(Poco::Net::HTTPServerRequest& request,
-            Poco::Net::HTTPServerResponse& response) override;
+        void handleRequest(Poco::Net::HTTPServerRequest& request, Poco::Net::HTTPServerResponse& response) override;
 
     protected:
-        void registerUser(Poco::Net::HTTPServerRequest& request,
-            Poco::Net::HTTPServerResponse& response);
+        void registerUser(Poco::Net::HTTPServerRequest& request, Poco::Net::HTTPServerResponse& response);
     };
-}
+} // namespace Rest::Controller

@@ -5,12 +5,12 @@
 #include "Rest/Controller/NotFoundController.h"
 #include "Rest/Controller/UserController.h"
 
-Poco::Net::HTTPRequestHandler* Api::RequestRouter::createRequestHandler(const Poco::Net::HTTPServerRequest& request)
+Poco::Net::HTTPRequestHandler* Rest::RequestRouter::createRequestHandler(const Poco::Net::HTTPServerRequest& request)
 {
-    if (request.getURI() == "/api/v0/user")
-    {
-        return new Api::UserController();
-    }
+    using namespace Rest;
 
-    return new Api::NotFoundController();
+    const auto u = request.getURI();
+    if (u == "/api/v0/user") return new Controller::UserController();
+
+    return new Controller::NotFoundController();
 }

@@ -9,6 +9,7 @@ list(PREPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 find_package(Poco REQUIRED COMPONENTS Foundation Util Data Net)
 find_package(ReflectCpp REQUIRED)
+find_package(stduuid CONFIG REQUIRED)
 if(${SYNC_SERVICE_ENABLE_TESTS})
     find_package(GTest CONFIG REQUIRED)
 endif()

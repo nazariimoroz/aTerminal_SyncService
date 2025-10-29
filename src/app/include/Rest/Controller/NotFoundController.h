@@ -2,7 +2,7 @@
 
 #include <Poco/Net/HTTPRequestHandler.h>
 
-namespace Api
+namespace Rest::Controller
 {
     class NotFoundController final : public Poco::Net::HTTPRequestHandler
     {

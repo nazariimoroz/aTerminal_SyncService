@@ -11,6 +11,11 @@
         "net"
       ]
     },
-    "gtest"
+    {
+      "name": "gtest"
+    },
+    {
+      "name" : "stduuid"
+    }
   ]
 }

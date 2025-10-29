@@ -1,10 +1,13 @@
-#include <Poco/Util/ServerApplication.h>
-#include <Poco/Util/Application.h>
-#include <Poco/Net/ServerSocket.h>
 #include <Poco/Net/HTTPServer.h>
 #include <Poco/Net/HTTPServerParams.h>
+#include <Poco/Net/ServerSocket.h>
+#include <Poco/Util/Application.h>
+#include <Poco/Util/ServerApplication.h>
 
+#include "Infra/InMemoryUserStorage.h"
 #include "Rest/RequestRouter.h"
+#include "Service/MessageBus.h"
+#include "Service/User/RegisterUserHandler.h"
 
 using namespace Poco;
 
@@ -64,13 +67,22 @@ protected:
     {
         logger().information("main started");
 
+        Service::MessageBus::setInstance(std::make_unique<Service::MessageBus>());
+
+        auto userStorage = std::make_shared<Infra::InMemoryUserStorage>();
+        auto registerUserHandler = std::make_shared<Service::User::RegisterUserHandler>(userStorage);
+
+        Service::MessageBus::instance().registerHandler<Service::User::RegisterUserCommand>(
+            registerUserHandler, &Service::User::RegisterUserHandler::execute);
+
+        /** Init REST api server */
         const Net::ServerSocket svs(HTTP_PORT);
         Net::HTTPServerParams::Ptr params = new Net::HTTPServerParams;
         params->setMaxQueued(64);
         params->setMaxThreads(4);
 
         Net::HTTPServer server(
-            new Api::RequestRouter(),
+            new Rest::RequestRouter(),
             svs,
             params
         );
@@ -87,6 +99,7 @@ protected:
 
         return Application::EXIT_OK;
     }
+
 };
 
 POCO_SERVER_MAIN(ApplicationMain)

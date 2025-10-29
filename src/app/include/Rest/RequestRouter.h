@@ -2,7 +2,7 @@
 
 #include <Poco/Net/HTTPRequestHandlerFactory.h>
 
-namespace Api
+namespace Rest
 {
     class RequestRouter final : public Poco::Net::HTTPRequestHandlerFactory {
     public:

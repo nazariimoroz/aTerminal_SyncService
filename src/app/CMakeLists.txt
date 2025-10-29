@@ -10,6 +10,8 @@ add_library(${PROJECT_NAME}_lib ${HDR} ${SRC})
 target_link_libraries(${PROJECT_NAME}_lib
         PUBLIC
         sync_service_util
+
+        stduuid
         reflectcpp::reflectcpp
         Poco::Foundation
         Poco::Util
@@ -34,7 +36,7 @@ if(SYNC_SERVICE_ENABLE_TESTS)
     enable_testing()
 
     file(GLOB_RECURSE TEST_SRC
-            "${PROJECT_SOURCE_DIR}/tests/*.cpp"
+            "${PROJECT_SOURCE_DIR}/tests/*.tests.cpp"
     )
 
     add_executable(sync_service_app_tests ${TEST_SRC})
@@ -49,6 +51,7 @@ if(SYNC_SERVICE_ENABLE_TESTS)
             PRIVATE
             ${PROJECT_NAME}_lib
             sync_service_util
+
             GTest::gtest
             GTest::gtest_main
             Poco::Foundation

@@ -4,7 +4,7 @@
 #include <Poco/Net/HTTPServerRequest.h>
 #include <Poco/JSON/Object.h>
 
-void Api::NotFoundController::handleRequest(Poco::Net::HTTPServerRequest& request,
+void Rest::Controller::NotFoundController::handleRequest(Poco::Net::HTTPServerRequest& request,
                                             Poco::Net::HTTPServerResponse& response)
 {
     response.setStatus(Poco::Net::HTTPResponse::HTTP_NOT_FOUND);
