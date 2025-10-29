@@ -1,0 +1,16 @@
+cmake_minimum_required(VERSION 3.31)
+project(sync_service)
+
+set(CMAKE_CXX_STANDARD 23)
+
+option(SYNC_SERVICE_ENABLE_TESTS "Build and run unit tests" ON)
+
+list(PREPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
+find_package(Poco REQUIRED COMPONENTS Foundation Util Data Net)
+find_package(ReflectCpp REQUIRED)
+if(${SYNC_SERVICE_ENABLE_TESTS})
+    find_package(GTest CONFIG REQUIRED)
+endif()
+
+add_subdirectory(src)
