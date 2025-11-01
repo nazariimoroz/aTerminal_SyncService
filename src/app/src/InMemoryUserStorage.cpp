@@ -6,6 +6,8 @@
 
 using namespace Infra;
 
+InMemoryUserStorage::~InMemoryUserStorage() = default;
+
 std::optional<Domain::User> InMemoryUserStorage::findById(const int& id)
 {
     std::shared_lock lock(_mutex);
@@ -38,7 +40,7 @@ void InMemoryUserStorage::add(Domain::User& user)
 
     if (_byEmail.contains(user.getEmail()))
     {
-        throw std::runtime_error("email already registered");
+        throw Port::User::EmailAlreadyRegisteredException("User with such email is already registered");
     }
 
     user.setId(generateId());

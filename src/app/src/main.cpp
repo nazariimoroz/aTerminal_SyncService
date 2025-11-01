@@ -7,9 +7,9 @@
 #include "Infra/InMemoryUserStorage.h"
 #include "Rest/RequestRouter.h"
 #include "Service/MessageBus.h"
+#include "Service/User/LoginUserHandler.h"
 #include "Service/User/RegisterUserHandler.h"
-
-using namespace Poco;
+#include "Util/Crypto/PasswordHasher.h"
 
 class ApplicationMain final : public Poco::Util::ServerApplication
 {
@@ -24,20 +24,18 @@ protected:
     std::uint32_t HTTP_PORT;
 
 protected:
-    void defineOptions(Util::OptionSet& options) override
+    void defineOptions(Poco::Util::OptionSet& options) override
     {
         ServerApplication::defineOptions(options);
 
         using Poco::Util::Option;
         using Poco::Util::OptionCallback;
 
-        options.addOption(
-            Option("configFile", "c", "path to config file")
-                .required(true)
-                .repeatable(false)
-                .argument("file")
-                .binding("configFile")
-        );
+        options.addOption(Option("configFile", "c", "path to config file")
+                              .required(true)
+                              .repeatable(false)
+                              .argument("file")
+                              .binding("configFile"));
     }
 
     void initialize(Application& self) override
@@ -65,27 +63,24 @@ protected:
 
     int main(const std::vector<std::string>& args) override
     {
-        logger().information("main started");
+        /** Init Utils */
+        const auto passwordHasher = std::make_shared<Util::Crypto::PasswordHasher>();
 
-        Service::MessageBus::setInstance(std::make_unique<Service::MessageBus>());
+        /** Init Infra */
+        const auto userStorage = std::make_shared<Infra::InMemoryUserStorage>();
 
-        auto userStorage = std::make_shared<Infra::InMemoryUserStorage>();
-        auto registerUserHandler = std::make_shared<Service::User::RegisterUserHandler>(userStorage);
-
-        Service::MessageBus::instance().registerHandler<Service::User::RegisterUserCommand>(
-            registerUserHandler, &Service::User::RegisterUserHandler::execute);
+        /** Init Services */
+        const auto messageBus = std::make_shared<Service::MessageBus>();
+        const auto registerUserHandler = Service::User::RegisterUserHandler::make(messageBus, userStorage, passwordHasher);
+        const auto loginUserHandler = Service::User::LoginUserHandler::make(messageBus, userStorage, passwordHasher);
 
         /** Init REST api server */
-        const Net::ServerSocket svs(HTTP_PORT);
-        Net::HTTPServerParams::Ptr params = new Net::HTTPServerParams;
+        const auto svs = Poco::Net::ServerSocket(HTTP_PORT);
+        const auto params = new Poco::Net::HTTPServerParams;
         params->setMaxQueued(64);
         params->setMaxThreads(4);
 
-        Net::HTTPServer server(
-            new Rest::RequestRouter(),
-            svs,
-            params
-        );
+        auto server = Poco::Net::HTTPServer(new Rest::RequestRouter(messageBus, logger()), svs, params);
 
         logger().information("Starting HTTP server localhost:" + std::to_string(HTTP_PORT));
         server.start();
@@ -95,11 +90,8 @@ protected:
         logger().information("Shutting down HTTP server...");
         server.stop();
 
-        logger().information("main finished");
-
         return Application::EXIT_OK;
     }
-
 };
 
 POCO_SERVER_MAIN(ApplicationMain)

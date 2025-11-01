@@ -11,12 +11,14 @@ target_link_libraries(${PROJECT_NAME}_lib
         PUBLIC
         sync_service_util
 
-        stduuid
         reflectcpp::reflectcpp
         Poco::Foundation
         Poco::Util
         Poco::Data
         Poco::Net
+
+        PRIVATE
+        ctre::ctre
 )
 
 target_include_directories(${PROJECT_NAME}_lib
@@ -38,22 +40,26 @@ if(SYNC_SERVICE_ENABLE_TESTS)
     file(GLOB_RECURSE TEST_SRC
             "${PROJECT_SOURCE_DIR}/tests/*.tests.cpp"
     )
+    file(GLOB_RECURSE TEST_MOCKS
+            "${PROJECT_SOURCE_DIR}/tests/*.mocks.h"
+    )
 
-    add_executable(sync_service_app_tests ${TEST_SRC})
+    add_executable(${PROJECT_NAME}_tests ${TEST_MOCKS} ${TEST_SRC})
 
-    target_include_directories(sync_service_app_tests
+    target_include_directories(${PROJECT_NAME}_tests
             PUBLIC
             "${PROJECT_SOURCE_DIR}/include"
             "${PROJECT_SOURCE_DIR}/tests"
     )
 
-    target_link_libraries(sync_service_app_tests
+    target_link_libraries(${PROJECT_NAME}_tests
             PRIVATE
             ${PROJECT_NAME}_lib
             sync_service_util
 
             GTest::gtest
             GTest::gtest_main
+            GTest::gmock
             Poco::Foundation
             Poco::Util
             Poco::Data
@@ -62,7 +68,7 @@ if(SYNC_SERVICE_ENABLE_TESTS)
 
     add_test(
             NAME sync_service_tests
-            COMMAND sync_service_app_tests
+            COMMAND ${PROJECT_NAME}_tests
     )
 
 endif()

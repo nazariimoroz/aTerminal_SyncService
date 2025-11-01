@@ -1,5 +1,3 @@
-// MessageBusTests.cpp
-
 #include <gtest/gtest.h>
 #include <memory>
 #include <string>
@@ -129,7 +127,7 @@ TEST(MessageBusTests, Call_ThrowsIfNoHandlerRegistered)
         {
             (void)bus.call(cmd);
         },
-        std::runtime_error
+        Util::LogicException
     );
 }
 

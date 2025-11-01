@@ -1,14 +1,18 @@
 #pragma once
-#include <unordered_map>
+#include <Poco/Exception.h>
 #include <shared_mutex>
+#include <unordered_map>
 
 #include "Port/User/UserUpdatableStorage.h"
+#include "Util/BusinessException.h"
 
 namespace Infra
 {
-    class InMemoryUserStorage : public Port::User::IUserUpdatableStorage
+    class InMemoryUserStorage final : public Port::User::IUserUpdatableStorage
     {
     public:
+        ~InMemoryUserStorage() override;
+
         std::optional<Domain::User> findById(const int& id) override;
         std::optional<Domain::User> findByEmail(const std::string& email) override;
         bool existsByEmail(const std::string& email) override;

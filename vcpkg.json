@@ -19,6 +19,9 @@
     },
     {
       "name" : "libsodium"
+    },
+    {
+      "name" : "ctre"
     }
   ]
 }

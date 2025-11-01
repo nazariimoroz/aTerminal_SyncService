@@ -24,28 +24,18 @@ namespace Domain
             _email = email;
         }
 
-        const std::string& getPassword() const
+        const std::vector<char>& getPassword() const
         {
             return _password;
         }
-        void setPassword(const std::string& password)
+        void setPassword(std::vector<char> password)
         {
-            _password = password;
+            _password = std::move(password);
         }
 
     protected:
         int _id = 0;
         std::string _email;
-        std::string _password;
-    };
-
-    class UserDomainService
-    {
-    public:
-        User RegisterUser(std::string email, std::string rawPassword)
-        {
-            User user;
-            user.setEmail(email);
-        }
+        std::vector<char> _password;
     };
 } // namespace Domain

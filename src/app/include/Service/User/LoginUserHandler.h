@@ -1,53 +1,50 @@
 #pragma once
+
+#include <Poco/Exception.h>
 #include <memory>
 #include <string>
 
+#include "Util/BusinessException.h"
 #include "Util/Crypto/PasswordHasher.h"
 
 namespace Service
 {
     class MessageBus;
 }
-namespace Poco
-{
-    class Logger;
-}
 namespace Port::User
 {
     class IUserUpdatableStorage;
 }
-namespace Port
-{
-    class IUnitOfWork;
-}
 
 namespace Service::User
 {
-    struct RegisterUserResult
+    POCO_DECLARE_EXCEPTION(, InvalidEmailOrPasswordException, Util::BusinessException)
+
+    struct LoginUserResult
     {
         int userId;
     };
 
-    struct RegisterUserCommand
+    struct LoginUserCommand
     {
         std::string email;
         std::string rawPassword;
 
-        using Result = RegisterUserResult;
+        using Result = LoginUserResult;
     };
 
-    class RegisterUserHandler
+    class LoginUserHandler
     {
-        RegisterUserHandler(std::shared_ptr<Service::MessageBus> messageBus,
-                            std::shared_ptr<Port::User::IUserUpdatableStorage> userStorage,
-                            std::shared_ptr<Util::Crypto::PasswordHasher> passwordHasher);
+        LoginUserHandler(std::shared_ptr<Service::MessageBus> messageBus,
+                         std::shared_ptr<Port::User::IUserUpdatableStorage> userStorage,
+                         std::shared_ptr<Util::Crypto::PasswordHasher> passwordHasher);
 
     public:
-        static std::shared_ptr<RegisterUserHandler> make(std::shared_ptr<Service::MessageBus> messageBus,
-                                                         std::shared_ptr<Port::User::IUserUpdatableStorage> userStorage,
-                                                         std::shared_ptr<Util::Crypto::PasswordHasher> passwordHasher);
+        static std::shared_ptr<LoginUserHandler> make(std::shared_ptr<Service::MessageBus> messageBus,
+                                                      std::shared_ptr<Port::User::IUserUpdatableStorage> userStorage,
+                                                      std::shared_ptr<Util::Crypto::PasswordHasher> passwordHasher);
 
-        RegisterUserResult execute(const RegisterUserCommand& command);
+        LoginUserResult execute(const LoginUserCommand& command);
 
     protected:
         std::shared_ptr<Service::MessageBus> _messageBus;

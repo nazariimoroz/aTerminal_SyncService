@@ -1,5 +1,6 @@
 #pragma once
 #include "UserStorage.h"
+#include "Util/BusinessException.h"
 
 namespace Port
 {
@@ -8,9 +9,13 @@ namespace Port
 
 namespace Port::User
 {
+    POCO_DECLARE_EXCEPTION(, EmailAlreadyRegisteredException, Util::BusinessException)
+
     class IUserUpdatableStorage : public IUserStorage
     {
     public:
+        ~IUserUpdatableStorage() override;
+
         virtual void add(Domain::User& user) = 0;
         virtual void update(const Domain::User& user) = 0;
 

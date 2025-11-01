@@ -9,6 +9,9 @@
 #include <typeindex>
 #include <unordered_map>
 
+#include "Defines.h"
+#include "Util/LogicException.h"
+
 namespace Service
 {
     template <class T>
@@ -19,9 +22,6 @@ namespace Service
     public:
         template <CommandC Cmd>
         using ResultT = typename Cmd::Result;
-
-        static void setInstance(std::unique_ptr<MessageBus> messageBus);
-        static MessageBus& instance();
 
         template <CommandC Cmd>
         void registerHandler(std::function<ResultT<Cmd>(const Cmd&)> handler)
@@ -44,10 +44,18 @@ namespace Service
             std::lock_guard lock(_mutex);
             const std::type_index key = typeid(Cmd);
 
-            _handlers[key] = [obj = std::move(obj), method](const void* rawCmd) -> std::any
+            std::weak_ptr<Obj> weak = std::move(obj);
+
+            _handlers[key] = [weak, method](const void* rawCmd) -> std::any
             {
+                auto locked = weak.lock();
+                if (!locked)
+                {
+                    throw Util::LogicException("Handler object is no longer available");
+                }
+
                 const Cmd& cmd = *static_cast<const Cmd*>(rawCmd);
-                ResultT<Cmd> r = ((*obj).*method)(cmd);
+                ResultT<Cmd> r = ((*locked).*method)(cmd);
                 return std::any(std::move(r));
             };
         }
@@ -58,10 +66,18 @@ namespace Service
             std::lock_guard lock(_mutex);
             const std::type_index key = typeid(Cmd);
 
-            _handlers[key] = [obj = std::move(obj), method](const void* rawCmd) -> std::any
+            std::weak_ptr<Obj> weak = std::move(obj);
+
+            _handlers[key] = [weak, method](const void* rawCmd) -> std::any
             {
+                auto locked = weak.lock();
+                if (!locked)
+                {
+                    throw Util::LogicException("Handler object is no longer available");
+                }
+
                 const Cmd& cmd = *static_cast<const Cmd*>(rawCmd);
-                ResultT<Cmd> r = ((*obj).*method)(cmd);
+                ResultT<Cmd> r = ((*locked).*method)(cmd);
                 return std::any(std::move(r));
             };
         }
@@ -76,7 +92,7 @@ namespace Service
                 auto it = _handlers.find(std::type_index(typeid(Cmd)));
                 if (it == _handlers.end())
                 {
-                    throw std::runtime_error("No handler registered for this Command type");
+                    throw Util::LogicException("No handler registered for this Command type");
                 }
                 fn = it->second;
             }
@@ -88,7 +104,5 @@ namespace Service
     private:
         std::mutex _mutex;
         std::unordered_map<std::type_index, std::function<std::any(const void*)>> _handlers;
-
-        static std::unique_ptr<MessageBus> _messageBusInstance;
     };
 } // namespace Service
