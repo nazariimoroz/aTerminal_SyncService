@@ -83,8 +83,19 @@ try
     createJwtCommand.id = registerUserResult.userId;
     const auto createJwtResult = getMessageBus()->call(createJwtCommand);
 
+    /** Response */
+    response.set("Authorization", "Bearer " + createJwtResult.authToken);
+
+    Poco::Net::HTTPCookie cookie("refresh_token", createJwtResult.refreshToken);
+    cookie.setHttpOnly(true);
+    cookie.setSecure(true);
+    cookie.setPath("/");
+    cookie.setMaxAge(7 * 24 * 60 * 60);
+    cookie.setSameSite(Poco::Net::HTTPCookie::SAME_SITE_STRICT);
+    response.addCookie(cookie);
+
     response.setStatus(Poco::Net::HTTPResponse::HTTP_CREATED);
-    response.send() << rfl::json::write(RegisterAuthResponseDto{ .jwt = createJwtResult.jwt });
+    response.send();
 }
 catch (const Port::User::EmailAlreadyRegisteredException& ex)
 {
@@ -95,6 +106,7 @@ catch (std::exception& ex)
 {
     response.setStatus(Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
     getLogger().error("UserController::registerUser: %s", ex.what());
+    response.send();
 }
 
 void AuthController::loginUser(Poco::Net::HTTPServerRequest& request,
@@ -124,8 +136,19 @@ try
     createJwtCommand.id = loginUserResult.userId;
     const auto createJwtResult = getMessageBus()->call(createJwtCommand);
 
+    /** Response */
+    response.set("Authorization", "Bearer " + createJwtResult.authToken);
+
+    Poco::Net::HTTPCookie cookie("refresh_token", createJwtResult.refreshToken);
+    cookie.setHttpOnly(true);
+    cookie.setSecure(true);
+    cookie.setPath("/");
+    cookie.setMaxAge(7 * 24 * 60 * 60);
+    cookie.setSameSite(Poco::Net::HTTPCookie::SAME_SITE_STRICT);
+    response.addCookie(cookie);
+
     response.setStatus(Poco::Net::HTTPResponse::HTTP_CREATED);
-    response.send() << rfl::json::write(LoginAuthResponseDto{ .jwt = createJwtResult.jwt });
+    response.send();
 }
 catch (const Service::User::InvalidEmailOrPasswordException& ex)
 {
@@ -136,4 +159,5 @@ catch (std::exception& ex)
 {
     response.setStatus(Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
     getLogger().error("UserController::loginUser: %s", ex.what());
+    response.send();
 }

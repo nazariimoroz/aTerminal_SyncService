@@ -17,6 +17,5 @@ void Rest::Controller::NotFoundController::handleRequest(Poco::Net::HTTPServerRe
     std::ostringstream oss;
     Poco::JSON::Stringifier::stringify(json, oss);
 
-    std::ostream& out = response.send();
-    out << oss.str();
+    response.send() << oss.str();
 }

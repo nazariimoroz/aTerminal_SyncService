@@ -7,7 +7,8 @@
 
 using namespace Service;
 
-POCO_IMPLEMENT_EXCEPTION(FailedToVerifyJwtException, Util::BusinessException, "FailedToVerifyJwtException")
+POCO_IMPLEMENT_EXCEPTION(FailedToVerifyJwtException, Util::LogicException, "FailedToVerifyJwtException")
+POCO_IMPLEMENT_EXCEPTION(RefreshTokenExpiredJwtException, Util::BusinessException, "RefreshTokenExpiredJwtException")
 
 JwtHandler::JwtHandler(const std::string& secretKey, std::shared_ptr<Service::MessageBus> messageBus)
     : _messageBus(std::move(messageBus))
@@ -26,31 +27,67 @@ std::shared_ptr<JwtHandler> JwtHandler::make(const std::string& secretKey, std::
 
 CreateJwtResult JwtHandler::execute(const CreateJwtCommand& command) const
 {
-    Poco::JWT::Token token;
-    token.setType("JWT");
-    // token.setSubject("");
-    token.payload().set("id", command.id);
-    token.setIssuedAt(Poco::Timestamp());
-    token.setExpiration(Poco::Timestamp() + 60 * 60 * Poco::Timestamp::resolution()); // +1h
+    CreateJwtResult result;
+    result.authToken = createAuthToken(command.id);
+    result.refreshToken = createRefreshToken(command.id);
 
-    auto jwt = getSigner().sign(token, Poco::JWT::Signer::ALGO_HS256);
-
-    return CreateJwtResult{.jwt = std::move(jwt)};
+    return result;
 }
 
 VerifyJwtResult JwtHandler::execute(const VerifyJwtCommand& command) const
-try
 {
-    Poco::JWT::Token token = getSigner().verify(command.jwt);
-    if (!token.payload().has("id"))
+    try
     {
-        throw FailedToVerifyJwtException();
-    }
+        Poco::JWT::Token token = getSigner().verify(command.authToken);
+        if (!token.payload().has("id"))
+        {
+            throw FailedToVerifyJwtException();
+        }
 
-    int id = token.payload().getValue<int>("id");
-    return VerifyJwtResult{.id = id};
+        return VerifyJwtResult{.id = token.payload().getValue<int>("id")};
+    }
+    catch (Poco::JWT::SignatureVerificationException&)
+    {
+        try
+        {
+            Poco::JWT::Token token = getSigner().verify(command.refreshToken);
+            if (!token.payload().has("id"))
+            {
+                throw FailedToVerifyJwtException();
+            }
+            int id = token.payload().getValue<int>("id");
+
+            auto authToken = createAuthToken(id);
+
+            return VerifyJwtResult{.id = id, .newAuthToken = authToken};
+        }
+        catch (Poco::JWT::SignatureVerificationException&)
+        {
+            throw RefreshTokenExpiredJwtException();
+        }
+    }
 }
-catch (Poco::JWT::SignatureVerificationException&)
+
+std::string JwtHandler::createAuthToken(int id) const
 {
-    throw FailedToVerifyJwtException();
+    Poco::JWT::Token auth_token;
+    auth_token.setType("JWT");
+    // token.setSubject("");
+    auth_token.payload().set("id", id);
+    auth_token.setIssuedAt(Poco::Timestamp());
+    auth_token.setExpiration(Poco::Timestamp() + 15 * 60 * Poco::Timestamp::resolution()); // +15m
+
+    return getSigner().sign(auth_token, Poco::JWT::Signer::ALGO_HS256);
+}
+
+std::string JwtHandler::createRefreshToken(int id) const
+{
+    Poco::JWT::Token auth_token;
+    auth_token.setType("JWT");
+    // token.setSubject("");
+    auth_token.payload().set("id", id);
+    auth_token.setIssuedAt(Poco::Timestamp());
+    auth_token.setExpiration(Poco::Timestamp() + 7 * 24 * 60 * 60  * Poco::Timestamp::resolution()); // +7d
+
+    return getSigner().sign(auth_token, Poco::JWT::Signer::ALGO_HS256);
 }

@@ -21,21 +21,12 @@ namespace Rest::Controller
         Defines::Password password;
     };
 
-    struct RegisterAuthResponseDto
-    {
-        std::string jwt;
-    };
-
     struct LoginAuthRequestDto
     {
         rfl::Email email;
         Defines::Password password;
     };
 
-    struct LoginAuthResponseDto
-    {
-        std::string jwt;
-    };
 
     class AuthController final : public Poco::Net::HTTPRequestHandler
     {

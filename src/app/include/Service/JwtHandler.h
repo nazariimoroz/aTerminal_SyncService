@@ -4,6 +4,7 @@
 #include <string>
 
 #include "Util/BusinessException.h"
+#include "Util/LogicException.h"
 
 namespace Service
 {
@@ -12,11 +13,13 @@ namespace Service
 
 namespace Service
 {
-    POCO_DECLARE_EXCEPTION(, FailedToVerifyJwtException, Util::BusinessException)
+    POCO_DECLARE_EXCEPTION(, FailedToVerifyJwtException, Util::LogicException)
+    POCO_DECLARE_EXCEPTION(, RefreshTokenExpiredJwtException, Util::BusinessException)
 
     struct CreateJwtResult
     {
-        std::string jwt;
+        std::string authToken;
+        std::string refreshToken;
     };
     struct CreateJwtCommand
     {
@@ -28,10 +31,13 @@ namespace Service
     struct VerifyJwtResult
     {
         int id;
+
+        std::optional<std::string> newAuthToken;
     };
     struct VerifyJwtCommand
     {
-        std::string jwt;
+        std::string authToken;
+        std::string refreshToken;
 
         using Result = VerifyJwtResult;
     };
@@ -47,6 +53,10 @@ namespace Service
 
         CreateJwtResult execute(const CreateJwtCommand& command) const;
         VerifyJwtResult execute(const VerifyJwtCommand& command) const;
+
+    protected:
+        std::string createAuthToken(int id) const;
+        std::string createRefreshToken(int id) const;
 
     protected:
         std::shared_ptr<Service::MessageBus> _messageBus;
