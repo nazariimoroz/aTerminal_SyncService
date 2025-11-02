@@ -16,7 +16,7 @@ AuthControllerResolver::~AuthControllerResolver() = default;
 
 bool AuthControllerResolver::match(const Poco::URI& uri) const
 {
-    return ctre::match<R"(^/api/v0/auth/(?:register|login|refresh|logout)/?$)">(uri.getPath());
+    return ctre::match<R"(^/api/v0/auth/(?:register|login)/?$)">(uri.getPath());
 }
 
 Poco::Net::HTTPRequestHandler* AuthControllerResolver::make() const

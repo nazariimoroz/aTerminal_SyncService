@@ -27,7 +27,7 @@ void AuthController::handleRequest(Poco::Net::HTTPServerRequest& request,
 {
     response.setContentType("application/json");
 
-    const auto [_, f] = ctre::match<R"(^/api/v0/auth/(register|login|refresh|logout)/?$)">(request.getURI());
+    const auto [_, f] = ctre::match<R"(^/api/v0/auth/(register|login)/?$)">(request.getURI());
     const auto m = request.getMethod();
 
     if (m == "POST")
@@ -41,14 +41,6 @@ void AuthController::handleRequest(Poco::Net::HTTPServerRequest& request,
         {
             loginUser(request, response);
             return;
-        }
-        else if (f == "refresh")
-        {
-
-        }
-        else if (f == "logout")
-        {
-
         }
     }
 

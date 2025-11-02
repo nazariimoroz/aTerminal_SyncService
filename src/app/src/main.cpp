@@ -80,28 +80,27 @@ protected:
         const auto registerUserHandler = Service::User::RegisterUserHandler::make(messageBus, userStorage, passwordHasher);
         const auto loginUserHandler = Service::User::LoginUserHandler::make(messageBus, userStorage, passwordHasher);
 
-        /** Init REST api server */
-        const auto svs = Poco::Net::ServerSocket(HTTP_PORT);
-        const auto params = new Poco::Net::HTTPServerParams;
-        params->setMaxQueued(64);
-        params->setMaxThreads(4);
+        /** Init REST Server */
+        const auto restSoket = Poco::Net::ServerSocket(HTTP_PORT);
+        const auto restParams = new Poco::Net::HTTPServerParams;
+        restParams->setMaxQueued(64);
+        restParams->setMaxThreads(4);
 
-        /** Init REST api router */
-        const std::vector<std::shared_ptr<Rest::ControllerResolver>> resolvers =
+        const std::vector<std::shared_ptr<Rest::ControllerResolver>> restControllerResolvers =
         {
             std::make_shared<Rest::Resolver::AuthControllerResolver>(messageBus, logger())
         };
 
-        const auto requestRouter = new Rest::RequestRouter(resolvers);
-        auto server = Poco::Net::HTTPServer(requestRouter, svs, params);
+        const auto restRequestRouter = new Rest::RequestRouter(restControllerResolvers);
+        auto restServer = Poco::Net::HTTPServer(restRequestRouter, restSoket, restParams);
 
-        logger().information("Starting HTTP server localhost:" + std::to_string(HTTP_PORT));
-        server.start();
+        logger().information("Starting REST server localhost:" + std::to_string(HTTP_PORT));
+        restServer.start();
 
         waitForTerminationRequest();
 
         logger().information("Shutting down HTTP server...");
-        server.stop();
+        restServer.stop();
 
         return Application::EXIT_OK;
     }
