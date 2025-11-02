@@ -12,14 +12,14 @@ using namespace Service::User;
 POCO_IMPLEMENT_EXCEPTION(InvalidEmailOrPasswordException, Util::BusinessException, "InvalidEmailOrPasswordException")
 
 LoginUserHandler::LoginUserHandler(std::shared_ptr<Service::MessageBus> messageBus,
-                                   std::shared_ptr<Port::User::IUserUpdatableStorage> userStorage,
+                                   std::shared_ptr<Port::User::IUserStorage> userStorage,
                                    std::shared_ptr<Util::Crypto::PasswordHasher> passwordHasher) :
     _messageBus(std::move(messageBus)), _userStorage(std::move(userStorage)), _passwordHasher(std::move(passwordHasher))
 {
 }
 
 std::shared_ptr<LoginUserHandler> LoginUserHandler::make(std::shared_ptr<Service::MessageBus> messageBus,
-                                                         std::shared_ptr<Port::User::IUserUpdatableStorage> userStorage,
+                                                         std::shared_ptr<Port::User::IUserStorage> userStorage,
                                                          std::shared_ptr<Util::Crypto::PasswordHasher> passwordHasher)
 {
     auto self = std::shared_ptr<LoginUserHandler>(

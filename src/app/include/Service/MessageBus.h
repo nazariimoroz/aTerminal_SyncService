@@ -2,10 +2,9 @@
 
 #include <any>
 #include <functional>
-#include <future>
 #include <memory>
 #include <mutex>
-#include <stdexcept>
+#include <shared_mutex>
 #include <typeindex>
 #include <unordered_map>
 
@@ -26,7 +25,7 @@ namespace Service
         template <CommandC Cmd>
         void registerHandler(std::function<ResultT<Cmd>(const Cmd&)> handler)
         {
-            std::lock_guard lock(_mutex);
+            std::unique_lock lock(_mutex);
 
             const std::type_index key = typeid(Cmd);
 
@@ -41,7 +40,7 @@ namespace Service
         template <CommandC Cmd, class Obj>
         void registerHandler(std::shared_ptr<Obj> obj, ResultT<Cmd> (Obj::*method)(const Cmd&))
         {
-            std::lock_guard lock(_mutex);
+            std::unique_lock lock(_mutex);
             const std::type_index key = typeid(Cmd);
 
             std::weak_ptr<Obj> weak = std::move(obj);
@@ -63,7 +62,7 @@ namespace Service
         template <CommandC Cmd, class Obj>
         void registerHandler(std::shared_ptr<Obj> obj, ResultT<Cmd> (Obj::*method)(const Cmd&) const)
         {
-            std::lock_guard lock(_mutex);
+            std::unique_lock lock(_mutex);
             const std::type_index key = typeid(Cmd);
 
             std::weak_ptr<Obj> weak = std::move(obj);
@@ -88,7 +87,7 @@ namespace Service
             std::function<std::any(const void*)> fn;
 
             {
-                std::lock_guard lock(_mutex);
+                std::shared_lock lock(_mutex);
                 auto it = _handlers.find(std::type_index(typeid(Cmd)));
                 if (it == _handlers.end())
                 {
@@ -102,7 +101,7 @@ namespace Service
         }
 
     private:
-        std::mutex _mutex;
+        std::shared_mutex _mutex;
         std::unordered_map<std::type_index, std::function<std::any(const void*)>> _handlers;
     };
 } // namespace Service

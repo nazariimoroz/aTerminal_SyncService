@@ -5,7 +5,10 @@
 #include <Poco/Util/ServerApplication.h>
 
 #include "Infra/InMemoryUserStorage.h"
+#include "Rest/Controller/AuthController.h"
 #include "Rest/RequestRouter.h"
+#include "Rest/Resolver/AuthControllerResolver.h"
+#include "Service/JwtHandler.h"
 #include "Service/MessageBus.h"
 #include "Service/User/LoginUserHandler.h"
 #include "Service/User/RegisterUserHandler.h"
@@ -22,6 +25,7 @@ public:
 
 protected:
     std::uint32_t HTTP_PORT;
+    std::string JWT_SECRET;
 
 protected:
     void defineOptions(Poco::Util::OptionSet& options) override
@@ -50,6 +54,7 @@ protected:
 
         /** Set config params */
         HTTP_PORT = config().getInt("http.port", 8080);
+        JWT_SECRET = config().getString("jwt.secret_key", "testtesttest");
 
         logger().information("initialize");
     }
@@ -71,6 +76,7 @@ protected:
 
         /** Init Services */
         const auto messageBus = std::make_shared<Service::MessageBus>();
+        const auto jwtHandler = Service::JwtHandler::make(JWT_SECRET, messageBus);
         const auto registerUserHandler = Service::User::RegisterUserHandler::make(messageBus, userStorage, passwordHasher);
         const auto loginUserHandler = Service::User::LoginUserHandler::make(messageBus, userStorage, passwordHasher);
 
@@ -80,7 +86,14 @@ protected:
         params->setMaxQueued(64);
         params->setMaxThreads(4);
 
-        auto server = Poco::Net::HTTPServer(new Rest::RequestRouter(messageBus, logger()), svs, params);
+        /** Init REST api router */
+        const std::vector<std::shared_ptr<Rest::ControllerResolver>> resolvers =
+        {
+            std::make_shared<Rest::Resolver::AuthControllerResolver>(messageBus, logger())
+        };
+
+        const auto requestRouter = new Rest::RequestRouter(resolvers);
+        auto server = Poco::Net::HTTPServer(requestRouter, svs, params);
 
         logger().information("Starting HTTP server localhost:" + std::to_string(HTTP_PORT));
         server.start();

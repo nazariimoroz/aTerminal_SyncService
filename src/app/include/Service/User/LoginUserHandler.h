@@ -13,7 +13,7 @@ namespace Service
 }
 namespace Port::User
 {
-    class IUserUpdatableStorage;
+    class IUserStorage;
 }
 
 namespace Service::User
@@ -36,12 +36,12 @@ namespace Service::User
     class LoginUserHandler
     {
         LoginUserHandler(std::shared_ptr<Service::MessageBus> messageBus,
-                         std::shared_ptr<Port::User::IUserUpdatableStorage> userStorage,
+                         std::shared_ptr<Port::User::IUserStorage> userStorage,
                          std::shared_ptr<Util::Crypto::PasswordHasher> passwordHasher);
 
     public:
         static std::shared_ptr<LoginUserHandler> make(std::shared_ptr<Service::MessageBus> messageBus,
-                                                      std::shared_ptr<Port::User::IUserUpdatableStorage> userStorage,
+                                                      std::shared_ptr<Port::User::IUserStorage> userStorage,
                                                       std::shared_ptr<Util::Crypto::PasswordHasher> passwordHasher);
 
         LoginUserResult execute(const LoginUserCommand& command);
@@ -53,8 +53,8 @@ namespace Service::User
             return _messageBus;
         }
 
-        std::shared_ptr<Port::User::IUserUpdatableStorage> _userStorage;
-        const std::shared_ptr<Port::User::IUserUpdatableStorage>& getUserStorage() const
+        std::shared_ptr<Port::User::IUserStorage> _userStorage;
+        const std::shared_ptr<Port::User::IUserStorage>& getUserStorage() const
         {
             return _userStorage;
         }

@@ -19,6 +19,7 @@ target_link_libraries(${PROJECT_NAME}_lib
 
         PRIVATE
         ctre::ctre
+        Poco::JWT
 )
 
 target_include_directories(${PROJECT_NAME}_lib

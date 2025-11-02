@@ -3,6 +3,12 @@
 #include <Poco/Net/HTTPRequestHandlerFactory.h>
 #include <functional>
 
+#include "Resolver/NotFoundControllerResolver.h"
+
+namespace Rest
+{
+    class ControllerResolver;
+}
 namespace Service
 {
     class MessageBus;
@@ -23,28 +29,23 @@ namespace Rest
     class RequestRouter final : public Poco::Net::HTTPRequestHandlerFactory
     {
     public:
-        RequestRouter(std::shared_ptr<Service::MessageBus> messageBus, Poco::Logger& logger);
+        explicit RequestRouter(std::vector<std::shared_ptr<ControllerResolver>> controllerResolvers,
+                      std::shared_ptr<ControllerResolver> notFoundResolver =
+                          std::make_shared<Resolver::NotFoundControllerResolver>());
 
         Poco::Net::HTTPRequestHandler* createRequestHandler(const Poco::Net::HTTPServerRequest& request) override;
 
-    protected:
-        std::shared_ptr<Service::MessageBus> _messageBus;
-        const std::shared_ptr<Service::MessageBus>& getMessageBus() const
-        {
-            return _messageBus;
-        }
-
-        Poco::Logger& _logger;
-        Poco::Logger& getLogger() const
-        {
-            return _logger;
-        }
-
     private:
-        std::vector<Route> _routes;
-        const std::vector<Route>& getRoutes() const
+        std::vector<std::shared_ptr<ControllerResolver>> _controllerResolvers;
+        const std::vector<std::shared_ptr<ControllerResolver>>& getControllerResolvers() const
         {
-            return _routes;
+            return _controllerResolvers;
+        }
+
+        std::shared_ptr<ControllerResolver> _notFoundControllerResolver;
+        const std::shared_ptr<ControllerResolver>& getNotFoundControllerResolver() const
+        {
+            return _notFoundControllerResolver;
         }
     };
 } // namespace Rest

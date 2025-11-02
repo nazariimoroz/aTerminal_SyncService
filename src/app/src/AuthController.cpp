@@ -10,16 +10,19 @@
 
 #include "Infra/InMemoryUserStorage.h"
 #include "Poco/Net/HTTPServerResponse.h"
+#include "Service/JwtHandler.h"
 #include "Service/MessageBus.h"
 #include "Service/User/LoginUserHandler.h"
 #include "Service/User/RegisterUserHandler.h"
 
-Rest::Controller::AuthController::AuthController(std::shared_ptr<Service::MessageBus> messageBus,
+using namespace Rest::Controller;
+
+AuthController::AuthController(std::shared_ptr<Service::MessageBus> messageBus,
                                                  Poco::Logger& logger) :
     _messageBus(std::move(messageBus)), _logger(logger)
 {}
 
-void Rest::Controller::AuthController::handleRequest(Poco::Net::HTTPServerRequest& request,
+void AuthController::handleRequest(Poco::Net::HTTPServerRequest& request,
                                                      Poco::Net::HTTPServerResponse& response)
 {
     response.setContentType("application/json");
@@ -53,8 +56,8 @@ void Rest::Controller::AuthController::handleRequest(Poco::Net::HTTPServerReques
     response.send() << rfl::json::write(Defines::ErrorDTO("Method Not Allowed"));
 }
 
-void Rest::Controller::AuthController::registerUser(Poco::Net::HTTPServerRequest& request,
-                                                    Poco::Net::HTTPServerResponse& response)
+void AuthController::registerUser(Poco::Net::HTTPServerRequest& request,
+    Poco::Net::HTTPServerResponse& response)
 try
 {
     std::stringstream bodyBuffer;
@@ -69,13 +72,19 @@ try
         return;
     }
 
-    Service::User::RegisterUserCommand registerUserCommand;
+    /** Main register logic */
+    Service::User::RegisterUserCommand registerUserCommand {};
     registerUserCommand.email = std::move(dto->email.value());
     registerUserCommand.rawPassword = std::move(dto->password.value());
     const auto registerUserResult = getMessageBus()->call(registerUserCommand);
 
+    /** JWT logic */
+    Service::CreateJwtCommand createJwtCommand {};
+    createJwtCommand.id = registerUserResult.userId;
+    const auto createJwtResult = getMessageBus()->call(createJwtCommand);
+
     response.setStatus(Poco::Net::HTTPResponse::HTTP_CREATED);
-    response.send() << rfl::json::write(RegisterAuthResponseDto{registerUserResult.userId});
+    response.send() << rfl::json::write(RegisterAuthResponseDto{ .jwt = createJwtResult.jwt });
 }
 catch (const Port::User::EmailAlreadyRegisteredException& ex)
 {
@@ -88,8 +97,8 @@ catch (std::exception& ex)
     getLogger().error("UserController::registerUser: %s", ex.what());
 }
 
-void Rest::Controller::AuthController::loginUser(Poco::Net::HTTPServerRequest& request,
-                                             Poco::Net::HTTPServerResponse& response)
+void AuthController::loginUser(Poco::Net::HTTPServerRequest& request,
+                                                 Poco::Net::HTTPServerResponse& response)
 try
 {
     std::stringstream bodyBuffer;
@@ -104,13 +113,19 @@ try
         return;
     }
 
+    /** Main login logic */
     Service::User::LoginUserCommand loginUserCommand;
     loginUserCommand.email = std::move(dto->email.value());
     loginUserCommand.rawPassword = std::move(dto->password.value());
     const auto loginUserResult = getMessageBus()->call(loginUserCommand);
 
+    /** JWT logic */
+    Service::CreateJwtCommand createJwtCommand {};
+    createJwtCommand.id = loginUserResult.userId;
+    const auto createJwtResult = getMessageBus()->call(createJwtCommand);
+
     response.setStatus(Poco::Net::HTTPResponse::HTTP_CREATED);
-    response.send() << rfl::json::write(LoginAuthResponseDto{loginUserResult.userId});
+    response.send() << rfl::json::write(LoginAuthResponseDto{ .jwt = createJwtResult.jwt });
 }
 catch (const Service::User::InvalidEmailOrPasswordException& ex)
 {

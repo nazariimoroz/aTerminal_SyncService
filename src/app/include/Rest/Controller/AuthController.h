@@ -23,7 +23,7 @@ namespace Rest::Controller
 
     struct RegisterAuthResponseDto
     {
-        int id;
+        std::string jwt;
     };
 
     struct LoginAuthRequestDto
@@ -34,7 +34,7 @@ namespace Rest::Controller
 
     struct LoginAuthResponseDto
     {
-        int id;
+        std::string jwt;
     };
 
     class AuthController final : public Poco::Net::HTTPRequestHandler
@@ -55,4 +55,5 @@ namespace Rest::Controller
         Poco::Logger& _logger;
         Poco::Logger& getLogger() const { return _logger; }
     };
+
 } // namespace Rest::Controller
