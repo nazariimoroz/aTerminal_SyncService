@@ -9,31 +9,32 @@
 
 using namespace Rest::Middleware;
 
-POCO_IMPLEMENT_EXCEPTION(AuthFailedException, Util::BusinessException, "AuthFailedException")
-
-AuthMiddleware::AuthMiddleware(std::shared_ptr<Service::MessageBus> messageBus) : _messageBus(std::move(messageBus))
+AuthMiddleware::AuthMiddleware(Service::MessageBus& messageBus) : _messageBus(messageBus)
 {
 }
 
-AuthMiddlewareResult AuthMiddleware::execute(Poco::Net::HTTPServerRequest& request,
-                                             Poco::Net::HTTPServerResponse& response) const
+std::expected<AuthMiddlewareResult, AuthFailedError> AuthMiddleware::execute(
+    Poco::Net::HTTPServerRequest& request, Poco::Net::HTTPServerResponse& response) const
 {
     auto authToken = std::invoke(
-        [&]
+        [&]() -> std::expected<std::string, AuthFailedError>
         {
             auto token = request.get("Authorization");
 
             static std::string bearer = "Bearer ";
             if (!Poco::startsWith(token, bearer))
-                throw AuthFailedException();
+            {
+                return std::unexpected(AuthFailedError());
+            }
 
             token = token.erase(bearer.size());
 
             return token;
         });
+    if (!authToken) return std::unexpected(authToken.error());
 
     auto refreshToken = std::invoke(
-        [&]
+        [&]() -> std::expected<std::string, AuthFailedError>
         {
             Poco::Net::NameValueCollection cookies;
             request.getCookies(cookies);
@@ -45,33 +46,29 @@ AuthMiddlewareResult AuthMiddleware::execute(Poco::Net::HTTPServerRequest& reque
             }
             catch (Poco::NotFoundException&)
             {
-                throw AuthFailedException();
+                return std::unexpected(AuthFailedError());
             }
 
             return token;
         });
+    if (!refreshToken) return std::unexpected(authToken.error());
 
     const auto verifyResult = std::invoke(
-        [&]
+        [&] () -> std::expected<Service::VerifyJwtResult, AuthFailedError>
         {
-            try
-            {
-                Service::VerifyJwtCommand verifyCommand;
-                verifyCommand.authToken = std::move(authToken);
-                verifyCommand.refreshToken = std::move(refreshToken);
-                return getMessageBus()->call(verifyCommand);
-            }
-            catch (Service::RefreshTokenExpiredJwtException&)
-            {
-                throw AuthFailedException();
-            }
+            Service::VerifyJwtCommand verifyCommand;
+            verifyCommand.authToken = std::move(*authToken);
+            verifyCommand.refreshToken = std::move(*refreshToken);
+            return getMessageBus().call(verifyCommand)
+                .transform_error([](auto&& error){ return AuthFailedError(); });
         });
+    if (!verifyResult) return std::unexpected(verifyResult.error());
 
     /** Set new auth token */
-    if (verifyResult.newAuthToken)
+    if (verifyResult->newAuthToken)
     {
-        response.set("Authorization", "Bearer " + *verifyResult.newAuthToken);
+        response.set("Authorization", "Bearer " + *verifyResult->newAuthToken);
     }
 
-    return AuthMiddlewareResult{.id = verifyResult.id};
+    return AuthMiddlewareResult{.id = verifyResult->id};
 }

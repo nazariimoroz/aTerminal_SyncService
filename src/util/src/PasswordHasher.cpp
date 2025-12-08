@@ -16,7 +16,7 @@ PasswordHasher::PasswordHasher()
     }
 }
 
-std::vector<char> PasswordHasher::hash(const std::string_view& password) const
+std::expected<std::vector<char>, Error::StrError> PasswordHasher::hash(const std::string_view& password) const
 {
     std::vector<char> toRet(crypto_pwhash_STRBYTES, ' ');
 
@@ -28,7 +28,7 @@ std::vector<char> PasswordHasher::hash(const std::string_view& password) const
             crypto_pwhash_MEMLIMIT_MODERATE
         ) != 0)
     {
-        throw Util::LogicException("Failed to hash password");
+        return std::unexpected(Error::StrError("Failed to hash password"));
     }
 
     return toRet;

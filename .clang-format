@@ -47,4 +47,5 @@ SpacesInAngles: false
 SpacesInConditionalStatement: false
 SpacesInCStyleCastParentheses: false
 SpacesInParentheses: false
+ColumnLimit: 100
 ...

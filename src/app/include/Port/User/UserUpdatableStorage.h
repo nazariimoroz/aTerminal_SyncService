@@ -1,26 +1,25 @@
 #pragma once
+#include <expected>
+#include "Defines.h"
+#include "Port/UnitOfWork.h"
 #include "UserStorage.h"
-#include "Util/BusinessException.h"
-
-namespace Port
-{
-    class IUnitOfWork;
-}
+#include "Util/Errors.h"
 
 namespace Port::User
 {
-    POCO_DECLARE_EXCEPTION(, EmailAlreadyRegisteredException, Util::BusinessException)
-
-    class IUserUpdatableStorage : public IUserStorage
+    struct EmailAlreadyRegisteredError : Error::StrError
     {
-    public:
-        ~IUserUpdatableStorage() override;
-
-        virtual void add(Domain::User& user) = 0;
-        virtual void update(const Domain::User& user) = 0;
-
-        virtual std::unique_ptr<IUnitOfWork> beginWork() = 0;
+        using StrError::StrError;
     };
+
+    template<class T>
+    concept UserUpdatableStorageC =
+        UserStorageC<T> &&
+        requires(T t, Domain::User& userMut, const Domain::User& userConst) {
+            { t.add(userMut) } -> std::same_as<std::expected<void, EmailAlreadyRegisteredError>>;
+            { t.update(userConst) } -> std::same_as<void>;
+            { t.beginWork() } -> Port::UnitOfWorkC;
+        };
 }
 
 

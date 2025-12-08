@@ -3,10 +3,9 @@
 #include <stdexcept>
 
 #include "Infra/InMemoryUserStorageUoW.h"
+#include "Infra/InMemoryUserStorage.h"
 
 using namespace Infra;
-
-InMemoryUserStorage::~InMemoryUserStorage() = default;
 
 std::optional<Domain::User> InMemoryUserStorage::findById(const int& id)
 {
@@ -34,19 +33,20 @@ bool InMemoryUserStorage::existsByEmail(const std::string& email)
     return _byEmail.contains(email);
 }
 
-void InMemoryUserStorage::add(Domain::User& user)
+std::expected<void, Port::User::EmailAlreadyRegisteredError> InMemoryUserStorage::add(Domain::User& user)
 {
     std::unique_lock lock(_mutex);
 
     if (_byEmail.contains(user.getEmail()))
     {
-        throw Port::User::EmailAlreadyRegisteredException("User with such email is already registered");
+        return std::unexpected(Port::User::EmailAlreadyRegisteredError("User with such email is already registered"));
     }
 
     user.setId(generateId());
 
     _byId[user.getId()] = user;
     _byEmail[user.getEmail()] = user;
+    return {};
 }
 
 void InMemoryUserStorage::update(const Domain::User& user)
@@ -57,9 +57,9 @@ void InMemoryUserStorage::update(const Domain::User& user)
     _byEmail[user.getEmail()] = user;
 }
 
-std::unique_ptr<Port::IUnitOfWork> InMemoryUserStorage::beginWork()
+InMemoryUserStorageUoW InMemoryUserStorage::beginWork()
 {
-    return std::make_unique<InMemoryUserStorageUoW>();
+    return InMemoryUserStorageUoW();
 }
 
 int InMemoryUserStorage::generateId()

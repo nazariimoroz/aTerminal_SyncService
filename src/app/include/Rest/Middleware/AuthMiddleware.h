@@ -1,8 +1,9 @@
 #pragma once
 #include <Poco/Exception.h>
+#include <expected>
 #include <memory>
 
-#include "Util/BusinessException.h"
+#include "Util/Errors.h"
 
 namespace Service
 {
@@ -12,11 +13,14 @@ namespace Poco::Net
 {
     class HTTPServerResponse;
     class HTTPServerRequest;
-}
+} // namespace Poco::Net
 
 namespace Rest::Middleware
 {
-    POCO_DECLARE_EXCEPTION(, AuthFailedException, Util::BusinessException)
+    struct AuthFailedError : Error::StrError
+    {
+        using StrError::StrError;
+    };
 
     struct AuthMiddlewareResult
     {
@@ -26,13 +30,16 @@ namespace Rest::Middleware
     class AuthMiddleware
     {
     public:
-        explicit AuthMiddleware(std::shared_ptr<Service::MessageBus> messageBus);
+        explicit AuthMiddleware(Service::MessageBus& messageBus);
 
-        AuthMiddlewareResult execute(Poco::Net::HTTPServerRequest& request, Poco::Net::HTTPServerResponse& response) const;
+        std::expected<AuthMiddlewareResult, AuthFailedError> execute(
+            Poco::Net::HTTPServerRequest& request, Poco::Net::HTTPServerResponse& response) const;
 
     protected:
-        std::shared_ptr<Service::MessageBus> _messageBus;
-        const std::shared_ptr<Service::MessageBus>& getMessageBus() const { return _messageBus; }
+        Service::MessageBus& _messageBus;
+        Service::MessageBus& getMessageBus() const
+        {
+            return _messageBus;
+        }
     };
-}
-
+} // namespace Rest::Middleware

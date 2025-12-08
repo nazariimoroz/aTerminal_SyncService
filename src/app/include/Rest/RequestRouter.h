@@ -5,10 +5,6 @@
 
 #include "Resolver/NotFoundControllerResolver.h"
 
-namespace Rest
-{
-    class ControllerResolver;
-}
 namespace Service
 {
     class MessageBus;
@@ -20,32 +16,30 @@ namespace Poco
 
 namespace Rest
 {
-    struct Route
-    {
-        std::function<bool(const std::string&)> validator;
-        std::function<Poco::Net::HTTPRequestHandler*()> controllerMaker;
-    };
-
+    template <ControllerResolverC NotfoundControllerResolverT,
+              ControllerResolverC... ControllerResolverTs>
     class RequestRouter final : public Poco::Net::HTTPRequestHandlerFactory
     {
     public:
-        explicit RequestRouter(std::vector<std::shared_ptr<ControllerResolver>> controllerResolvers,
-                      std::shared_ptr<ControllerResolver> notFoundResolver =
-                          std::make_shared<Resolver::NotFoundControllerResolver>());
+        RequestRouter(const std::tuple<ControllerResolverTs...>& controllerResolvers,
+                      NotfoundControllerResolverT&& notFoundResolver);
 
-        Poco::Net::HTTPRequestHandler* createRequestHandler(const Poco::Net::HTTPServerRequest& request) override;
+        Poco::Net::HTTPRequestHandler* createRequestHandler(
+            const Poco::Net::HTTPServerRequest& request) override;
 
     private:
-        std::vector<std::shared_ptr<ControllerResolver>> _controllerResolvers;
-        const std::vector<std::shared_ptr<ControllerResolver>>& getControllerResolvers() const
+        const std::tuple<ControllerResolverTs...>& _controllerResolvers;
+        const std::tuple<ControllerResolverTs...>& getControllerResolvers() const
         {
             return _controllerResolvers;
         }
 
-        std::shared_ptr<ControllerResolver> _notFoundControllerResolver;
-        const std::shared_ptr<ControllerResolver>& getNotFoundControllerResolver() const
+        NotfoundControllerResolverT& _notFoundControllerResolver;
+        NotfoundControllerResolverT& getNotFoundControllerResolver() const
         {
             return _notFoundControllerResolver;
         }
     };
 } // namespace Rest
+
+#include "RequestRouter.inl"

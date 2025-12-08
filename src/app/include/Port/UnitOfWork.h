@@ -3,13 +3,11 @@
 
 namespace Port
 {
-    class IUnitOfWork
+    template<class T>
+    concept UnitOfWorkC = requires(T t)
     {
-    public:
-        virtual ~IUnitOfWork() = default;
-
-        virtual void commit() = 0;
-        virtual void rollback() = 0;
+        { t.commit() } -> std::same_as<void>;
+        { t.rollback() } -> std::same_as<void>;
     };
 }
 

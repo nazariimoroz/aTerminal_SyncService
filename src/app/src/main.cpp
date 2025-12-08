@@ -69,16 +69,18 @@ protected:
     int main(const std::vector<std::string>& args) override
     {
         /** Init Utils */
-        const auto passwordHasher = std::make_shared<Util::Crypto::PasswordHasher>();
+        auto passwordHasher = Util::Crypto::PasswordHasher();
 
         /** Init Infra */
-        const auto userStorage = std::make_shared<Infra::InMemoryUserStorage>();
+        auto userStorage = Infra::InMemoryUserStorage();
 
         /** Init Services */
-        const auto messageBus = std::make_shared<Service::MessageBus>();
-        const auto jwtHandler = Service::JwtHandler::make(JWT_SECRET, messageBus);
-        const auto registerUserHandler = Service::User::RegisterUserHandler::make(messageBus, userStorage, passwordHasher);
-        const auto loginUserHandler = Service::User::LoginUserHandler::make(messageBus, userStorage, passwordHasher);
+        auto messageBus = Service::MessageBus();
+        auto jwtHandler = Service::JwtHandler::make(JWT_SECRET, messageBus);
+        const auto registerUserHandler =
+            Service::User::makeRegisterUserHandler(messageBus, userStorage, passwordHasher);
+        const auto loginUserHandler =
+            Service::User::makeLoginUserHandler(messageBus, userStorage, passwordHasher);
 
         /** Init REST Server */
         const auto restSoket = Poco::Net::ServerSocket(HTTP_PORT);
@@ -86,12 +88,11 @@ protected:
         restParams->setMaxQueued(64);
         restParams->setMaxThreads(4);
 
-        const std::vector<std::shared_ptr<Rest::ControllerResolver>> restControllerResolvers =
-        {
-            std::make_shared<Rest::Resolver::AuthControllerResolver>(messageBus, logger())
-        };
+        auto restControllerResolvers =
+            std::make_tuple(Rest::Resolver::AuthControllerResolver(messageBus, logger()));
 
-        const auto restRequestRouter = new Rest::RequestRouter(restControllerResolvers);
+        const auto restRequestRouter = new Rest::RequestRouter(
+            restControllerResolvers, Rest::Resolver::NotFoundControllerResolver());
         auto restServer = Poco::Net::HTTPServer(restRequestRouter, restSoket, restParams);
 
         logger().information("Starting REST server localhost:" + std::to_string(HTTP_PORT));

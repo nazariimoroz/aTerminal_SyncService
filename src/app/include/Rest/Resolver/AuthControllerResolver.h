@@ -15,20 +15,27 @@ namespace Service
 
 namespace Rest::Resolver
 {
-    class AuthControllerResolver final : public ControllerResolver
+    class AuthControllerResolver
     {
     public:
-        AuthControllerResolver(std::shared_ptr<Service::MessageBus> messageBus, Poco::Logger& logger);
-        ~AuthControllerResolver() override;
+        AuthControllerResolver(Service::MessageBus& messageBus, Poco::Logger& logger);
 
-        bool match(const Poco::URI& uri) const override;
-        Poco::Net::HTTPRequestHandler* make() const override;
+        bool match(const Poco::URI& uri) const;
+        Poco::Net::HTTPRequestHandler* make() const;
 
     protected:
-        std::shared_ptr<Service::MessageBus> _messageBus;
-        const std::shared_ptr<Service::MessageBus>& getMessageBus() const { return _messageBus; }
+        Service::MessageBus& _messageBus;
+        Service::MessageBus& getMessageBus() const
+        {
+            return _messageBus;
+        }
 
         Poco::Logger& _logger;
-        Poco::Logger& getLogger() const { return _logger; }
+        Poco::Logger& getLogger() const
+        {
+            return _logger;
+        }
     };
-}
+
+    static_assert(Rest::ControllerResolverC<AuthControllerResolver>);
+} // namespace Rest::Resolver

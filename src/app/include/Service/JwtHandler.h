@@ -1,9 +1,11 @@
 #pragma once
 #include <Poco/JWT/Signer.h>
+#include <expected>
 #include <memory>
 #include <string>
+#include <variant>
 
-#include "Util/BusinessException.h"
+#include "Util/Errors.h"
 #include "Util/LogicException.h"
 
 namespace Service
@@ -13,8 +15,12 @@ namespace Service
 
 namespace Service
 {
-    POCO_DECLARE_EXCEPTION(, FailedToVerifyJwtException, Util::LogicException)
-    POCO_DECLARE_EXCEPTION(, RefreshTokenExpiredJwtException, Util::BusinessException)
+    struct FailedToVerifyJwtError
+    {
+    };
+    struct RefreshTokenExpiredJwtError
+    {
+    };
 
     struct CreateJwtResult
     {
@@ -23,14 +29,15 @@ namespace Service
     };
     struct CreateJwtCommand
     {
-        int id;
+        int id = 0;
 
         using Result = CreateJwtResult;
+        using Error = void;
     };
 
     struct VerifyJwtResult
     {
-        int id;
+        int id = 0;
 
         std::optional<std::string> newAuthToken;
     };
@@ -40,35 +47,39 @@ namespace Service
         std::string refreshToken;
 
         using Result = VerifyJwtResult;
+        using Error =
+            std::variant<Error::StrError, FailedToVerifyJwtError, RefreshTokenExpiredJwtError>;
     };
 
 
     class JwtHandler
     {
-        JwtHandler(const std::string& secretKey, std::shared_ptr<Service::MessageBus> messageBus);
+        JwtHandler(const std::string& secretKey, Service::MessageBus& messageBus);
 
     public:
-        static std::shared_ptr<JwtHandler> make(const std::string& secretKey,
-                                                std::shared_ptr<Service::MessageBus> messageBus);
+        static JwtHandler make(const std::string& secretKey, Service::MessageBus& messageBus);
 
-        CreateJwtResult execute(const CreateJwtCommand& command) const;
-        VerifyJwtResult execute(const VerifyJwtCommand& command) const;
+        CreateJwtCommand::Result execute(const CreateJwtCommand& command) const;
+
+        std::expected<VerifyJwtCommand::Result, VerifyJwtCommand::Error> execute(
+            const VerifyJwtCommand& command) const;
 
     protected:
         std::string createAuthToken(int id) const;
         std::string createRefreshToken(int id) const;
 
     protected:
-        std::shared_ptr<Service::MessageBus> _messageBus;
-        const std::shared_ptr<Service::MessageBus>& getMessageBus() const
+        Service::MessageBus& _messageBus;
+        Service::MessageBus& getMessageBus() const
         {
             return _messageBus;
         }
 
     private:
-        Poco::JWT::Signer _signer;
-        const Poco::JWT::Signer& getSigner() const { return _signer; }
+        std::unique_ptr<Poco::JWT::Signer> _signer;
+        const Poco::JWT::Signer& getSigner() const
+        {
+            return *_signer;
+        }
     };
-}
-
-
+} // namespace Service

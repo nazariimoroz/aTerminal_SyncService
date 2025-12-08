@@ -14,12 +14,12 @@
 #include "Service/MessageBus.h"
 #include "Service/User/LoginUserHandler.h"
 #include "Service/User/RegisterUserHandler.h"
+#include "Util/Cbs.h"
 
 using namespace Rest::Controller;
 
-AuthController::AuthController(std::shared_ptr<Service::MessageBus> messageBus,
-                                                 Poco::Logger& logger) :
-    _messageBus(std::move(messageBus)), _logger(logger)
+AuthController::AuthController(Service::MessageBus& messageBus, Poco::Logger& logger) :
+    _messageBus(messageBus), _logger(logger)
 {}
 
 void AuthController::handleRequest(Poco::Net::HTTPServerRequest& request,
@@ -50,7 +50,6 @@ void AuthController::handleRequest(Poco::Net::HTTPServerRequest& request,
 
 void AuthController::registerUser(Poco::Net::HTTPServerRequest& request,
     Poco::Net::HTTPServerResponse& response)
-try
 {
     std::stringstream bodyBuffer;
     Poco::StreamCopier::copyStream(request.stream(), bodyBuffer);
@@ -68,12 +67,29 @@ try
     Service::User::RegisterUserCommand registerUserCommand {};
     registerUserCommand.email = std::move(dto->email.value());
     registerUserCommand.rawPassword = std::move(dto->password.value());
-    const auto registerUserResult = getMessageBus()->call(registerUserCommand);
+    const auto registerUserResult = getMessageBus().call(registerUserCommand);
+    if (!registerUserResult)
+    {
+        std::visit(Utils::Cbs(
+            [&](const Port::User::EmailAlreadyRegisteredError& error)
+            {
+                response.setStatus(Poco::Net::HTTPResponse::HTTP_CONFLICT);
+                response.send() << rfl::json::write(Defines::ErrorDTO(std::string(error.errorMessage)));
+            },
+            [&](const Error::StrError& error)
+            {
+                response.setStatus(Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
+                getLogger().error("UserController::registerUser: %s", error.errorMessage);
+                response.send();
+            }
+            ), registerUserResult.error());
+        return;
+    }
 
     /** JWT logic */
     Service::CreateJwtCommand createJwtCommand {};
-    createJwtCommand.id = registerUserResult.userId;
-    const auto createJwtResult = getMessageBus()->call(createJwtCommand);
+    createJwtCommand.id = registerUserResult->userId;
+    const auto createJwtResult = getMessageBus().call(createJwtCommand);
 
     /** Response */
     response.set("Authorization", "Bearer " + createJwtResult.authToken);
@@ -89,21 +105,9 @@ try
     response.setStatus(Poco::Net::HTTPResponse::HTTP_CREATED);
     response.send();
 }
-catch (const Port::User::EmailAlreadyRegisteredException& ex)
-{
-    response.setStatus(Poco::Net::HTTPResponse::HTTP_CONFLICT);
-    response.send() << rfl::json::write(Defines::ErrorDTO(ex.what()));
-}
-catch (std::exception& ex)
-{
-    response.setStatus(Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
-    getLogger().error("UserController::registerUser: %s", ex.what());
-    response.send();
-}
 
 void AuthController::loginUser(Poco::Net::HTTPServerRequest& request,
                                                  Poco::Net::HTTPServerResponse& response)
-try
 {
     std::stringstream bodyBuffer;
     Poco::StreamCopier::copyStream(request.stream(), bodyBuffer);
@@ -121,12 +125,18 @@ try
     Service::User::LoginUserCommand loginUserCommand;
     loginUserCommand.email = std::move(dto->email.value());
     loginUserCommand.rawPassword = std::move(dto->password.value());
-    const auto loginUserResult = getMessageBus()->call(loginUserCommand);
+    const auto loginUserResult = getMessageBus().call(loginUserCommand);
+    if (!loginUserResult)
+    {
+        response.setStatus(Poco::Net::HTTPResponse::HTTP_UNAUTHORIZED);
+        response.send() << rfl::json::write(Defines::ErrorDTO(std::string(loginUserResult.error().errorMessage)));
+        return;
+    }
 
     /** JWT logic */
     Service::CreateJwtCommand createJwtCommand {};
-    createJwtCommand.id = loginUserResult.userId;
-    const auto createJwtResult = getMessageBus()->call(createJwtCommand);
+    createJwtCommand.id = loginUserResult->userId;
+    const auto createJwtResult = getMessageBus().call(createJwtCommand);
 
     /** Response */
     response.set("Authorization", "Bearer " + createJwtResult.authToken);
@@ -140,16 +150,5 @@ try
     response.addCookie(cookie);
 
     response.setStatus(Poco::Net::HTTPResponse::HTTP_CREATED);
-    response.send();
-}
-catch (const Service::User::InvalidEmailOrPasswordException& ex)
-{
-    response.setStatus(Poco::Net::HTTPResponse::HTTP_UNAUTHORIZED);
-    response.send() << rfl::json::write(Defines::ErrorDTO(ex.what()));
-}
-catch (std::exception& ex)
-{
-    response.setStatus(Poco::Net::HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
-    getLogger().error("UserController::loginUser: %s", ex.what());
     response.send();
 }

@@ -2,10 +2,11 @@ project(sync_service_app)
 
 # Lib solution
 file(GLOB_RECURSE HDR "${PROJECT_SOURCE_DIR}/include/*.h")
+file(GLOB_RECURSE INL "${PROJECT_SOURCE_DIR}/inl/*.inl")
 file(GLOB_RECURSE SRC "${PROJECT_SOURCE_DIR}/src/*.cpp")
 list(REMOVE_ITEM SRC "${PROJECT_SOURCE_DIR}/src/main.cpp")
 
-add_library(${PROJECT_NAME}_lib ${HDR} ${SRC})
+add_library(${PROJECT_NAME}_lib ${HDR} ${INL} ${SRC})
 
 target_link_libraries(${PROJECT_NAME}_lib
         PUBLIC
@@ -25,6 +26,7 @@ target_link_libraries(${PROJECT_NAME}_lib
 target_include_directories(${PROJECT_NAME}_lib
         PUBLIC
         "${PROJECT_SOURCE_DIR}/include"
+        "${PROJECT_SOURCE_DIR}/inl"
 )
 
 # Final executable solution

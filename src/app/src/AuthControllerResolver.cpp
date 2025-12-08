@@ -7,12 +7,10 @@
 
 using namespace Rest::Resolver;
 
-AuthControllerResolver::AuthControllerResolver(std::shared_ptr<Service::MessageBus> messageBus,
+AuthControllerResolver::AuthControllerResolver(Service::MessageBus& messageBus,
                                                                  Poco::Logger& logger) :
-    _messageBus(std::move(messageBus)), _logger(logger)
+    _messageBus(messageBus), _logger(logger)
 {}
-
-AuthControllerResolver::~AuthControllerResolver() = default;
 
 bool AuthControllerResolver::match(const Poco::URI& uri) const
 {

@@ -31,7 +31,7 @@ namespace Rest::Controller
     class AuthController final : public Poco::Net::HTTPRequestHandler
     {
     public:
-        AuthController(std::shared_ptr<Service::MessageBus> messageBus, Poco::Logger& logger);
+        AuthController(Service::MessageBus& messageBus, Poco::Logger& logger);
 
         void handleRequest(Poco::Net::HTTPServerRequest& request, Poco::Net::HTTPServerResponse& response) override;
 
@@ -40,8 +40,8 @@ namespace Rest::Controller
         void loginUser(Poco::Net::HTTPServerRequest& request, Poco::Net::HTTPServerResponse& response);
 
     protected:
-        std::shared_ptr<Service::MessageBus> _messageBus;
-        const std::shared_ptr<Service::MessageBus>& getMessageBus() const { return _messageBus; }
+        Service::MessageBus& _messageBus;
+        Service::MessageBus& getMessageBus() const { return _messageBus; }
 
         Poco::Logger& _logger;
         Poco::Logger& getLogger() const { return _logger; }

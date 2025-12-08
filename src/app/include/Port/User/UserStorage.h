@@ -8,13 +8,10 @@
 
 namespace Port::User
 {
-    class IUserStorage
-    {
-    public:
-        virtual ~IUserStorage();
-
-        virtual std::optional<Domain::User> findById(const int& userId) = 0;
-        virtual std::optional<Domain::User> findByEmail(const std::string& email) = 0;
-        virtual bool existsByEmail(const std::string& userId) = 0;
+    template<class T>
+    concept UserStorageC = requires(T t, int userId, const std::string& email) {
+        { t.findById(userId) } -> std::same_as<std::optional<Domain::User>>;
+        { t.findByEmail(email) } -> std::same_as<std::optional<Domain::User>>;
+        { t.existsByEmail(email) } -> std::same_as<bool>;
     };
 }

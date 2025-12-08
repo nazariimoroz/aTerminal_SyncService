@@ -5,11 +5,13 @@
 #include "rfl/Size.hpp"
 #include "rfl/Validator.hpp"
 #include "rfl/comparisons.hpp"
-#include "Util/BusinessException.h"
 
 namespace Defines
 {
-    POCO_DECLARE_EXCEPTION(, InternalException, Util::BusinessException)
+    template <typename Callback, typename RetT, typename... ArgsT>
+    concept InvocableC =
+        std::invocable<Callback, ArgsT...> &&
+        std::same_as<std::invoke_result_t<Callback, ArgsT...>, RetT>;
 
     struct ErrorDTO
     {

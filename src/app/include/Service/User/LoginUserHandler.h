@@ -4,21 +4,31 @@
 #include <memory>
 #include <string>
 
-#include "Util/BusinessException.h"
+#include "Port/User/UserUpdatableStorage.h"
 #include "Util/Crypto/PasswordHasher.h"
 
 namespace Service
 {
     class MessageBus;
 }
-namespace Port::User
+
+namespace Service::User
 {
-    class IUserStorage;
+    template <Port::User::UserStorageC UserStorageT>
+    class LoginUserHandler;
+
+    template <Port::User::UserStorageC UserStorageT>
+    LoginUserHandler<UserStorageT> makeLoginUserHandler(
+        Service::MessageBus& messageBus, UserStorageT& userStorage,
+        Util::Crypto::PasswordHasher& passwordHasher);
 }
 
 namespace Service::User
 {
-    POCO_DECLARE_EXCEPTION(, InvalidEmailOrPasswordException, Util::BusinessException)
+    struct InvalidEmailOrPasswordError : Error::StrError
+    {
+        using StrError::StrError;
+    };
 
     struct LoginUserResult
     {
@@ -31,39 +41,46 @@ namespace Service::User
         std::string rawPassword;
 
         using Result = LoginUserResult;
+        using Error = InvalidEmailOrPasswordError;
     };
 
+    template <Port::User::UserStorageC UserStorageT>
     class LoginUserHandler
     {
-        LoginUserHandler(std::shared_ptr<Service::MessageBus> messageBus,
-                         std::shared_ptr<Port::User::IUserStorage> userStorage,
-                         std::shared_ptr<Util::Crypto::PasswordHasher> passwordHasher);
+        LoginUserHandler(Service::MessageBus& messageBus, UserStorageT& userStorage,
+                         Util::Crypto::PasswordHasher& passwordHasher);
 
     public:
-        static std::shared_ptr<LoginUserHandler> make(std::shared_ptr<Service::MessageBus> messageBus,
-                                                      std::shared_ptr<Port::User::IUserStorage> userStorage,
-                                                      std::shared_ptr<Util::Crypto::PasswordHasher> passwordHasher);
+        LoginUserHandler(LoginUserHandler&&);
 
-        LoginUserResult execute(const LoginUserCommand& command);
+        template <Port::User::UserStorageC UserStorageT>
+        friend LoginUserHandler<UserStorageT> Service::User::makeLoginUserHandler(
+            Service::MessageBus& messageBus, UserStorageT& userStorage,
+            Util::Crypto::PasswordHasher& passwordHasher);
+
+        std::expected<LoginUserCommand::Result, LoginUserCommand::Error> execute(
+            const LoginUserCommand& command);
 
     protected:
-        std::shared_ptr<Service::MessageBus> _messageBus;
-        const std::shared_ptr<Service::MessageBus>& getMessageBus() const
+        Service::MessageBus& _messageBus;
+        Service::MessageBus& getMessageBus() const
         {
             return _messageBus;
         }
 
-        std::shared_ptr<Port::User::IUserStorage> _userStorage;
-        const std::shared_ptr<Port::User::IUserStorage>& getUserStorage() const
+        UserStorageT& _userStorage;
+        UserStorageT& getUserStorage() const
         {
             return _userStorage;
         }
 
-        std::shared_ptr<Util::Crypto::PasswordHasher> _passwordHasher;
-        const std::shared_ptr<Util::Crypto::PasswordHasher>& getPasswordHasher() const
+        Util::Crypto::PasswordHasher& _passwordHasher;
+        Util::Crypto::PasswordHasher& getPasswordHasher() const
         {
             return _passwordHasher;
         }
     };
 
 } // namespace Service::User
+
+#include "LoginUserHandler.inl"

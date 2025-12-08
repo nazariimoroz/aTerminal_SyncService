@@ -12,18 +12,21 @@ struct PingCmd
 {
     int value;
     using Result = int;
+    using Error = int;
 };
 
 struct AddCmd
 {
     int x;
     using Result = int;
+    using Error = int;
 };
 
 struct MulCmd
 {
     int x;
     using Result = int;
+    using Error = int;
 };
 
 // Services
@@ -35,7 +38,7 @@ public:
         : _base(base)
     {}
 
-    int Add(const AddCmd& cmd)
+    std::expected<int, int> Add(const AddCmd& cmd)
     {
         _lastArg = cmd.x;
         return _base + cmd.x;
@@ -55,7 +58,7 @@ public:
         : _factor(factor)
     {}
 
-    int Mul(const MulCmd& cmd) const
+    std::expected<int, int> Mul(const MulCmd& cmd) const
     {
         return _factor * cmd.x;
     }
@@ -71,22 +74,23 @@ TEST(MessageBusTests, LambdaHandler_Call_ReturnsExpectedResult)
     MessageBus bus;
 
     bus.registerHandler<PingCmd>(
-        [](const PingCmd& c) -> PingCmd::Result {
+        [](const PingCmd& c) -> std::expected<PingCmd::Result, PingCmd::Error> {
             return c.value + 1;
         }
     );
 
     PingCmd cmd{41};
-    int result = bus.call(cmd);
+    auto result = bus.call(cmd);
 
-    EXPECT_EQ(result, 42);
+    EXPECT_TRUE(result.has_value());
+    EXPECT_EQ(*result, 42);
 }
 
 TEST(MessageBusTests, ObjectHandler_NonConstMethod_WorksAndMutatesServiceState)
 {
     MessageBus bus;
 
-    auto service = std::make_shared<AccumulatorService>(10);
+    auto service = AccumulatorService(10);
 
     bus.registerHandler<AddCmd>(
         service,
@@ -94,17 +98,18 @@ TEST(MessageBusTests, ObjectHandler_NonConstMethod_WorksAndMutatesServiceState)
     );
 
     AddCmd cmd{32};
-    int result = bus.call(cmd);
+    auto result = bus.call(cmd);
 
-    EXPECT_EQ(result, 42);
-    EXPECT_EQ(service->lastArg(), 32);
+    EXPECT_TRUE(result.has_value());
+    EXPECT_EQ(*result, 42);
+    EXPECT_EQ(service.lastArg(), 32);
 }
 
 TEST(MessageBusTests, ObjectHandler_ConstMethod_Works)
 {
     MessageBus bus;
 
-    auto service = std::make_shared<MultiplierService>(7);
+    auto service = MultiplierService(7);
 
     bus.registerHandler<MulCmd>(
         service,
@@ -112,8 +117,9 @@ TEST(MessageBusTests, ObjectHandler_ConstMethod_Works)
     );
 
     MulCmd cmd{9};
-    int result = bus.call(cmd);
+    auto result = bus.call(cmd);
 
+    EXPECT_TRUE(result.has_value());
     EXPECT_EQ(result, 63);
 }
 
@@ -136,19 +142,20 @@ TEST(MessageBusTests, ReRegister_OverridesPreviousHandler)
     MessageBus bus;
 
     bus.registerHandler<PingCmd>(
-        [](const PingCmd& c) -> PingCmd::Result {
+        [](const PingCmd& c) -> std::expected<PingCmd::Result, PingCmd::Error> {
             return c.value + 100;
         }
     );
 
     bus.registerHandler<PingCmd>(
-        [](const PingCmd& c) -> PingCmd::Result {
+        [](const PingCmd& c) -> std::expected<PingCmd::Result, PingCmd::Error> {
             return c.value + 1;
         }
     );
 
     PingCmd cmd{41};
-    int result = bus.call(cmd);
+    auto result = bus.call(cmd);
 
+    EXPECT_TRUE(result.has_value());
     EXPECT_EQ(result, 42);
 }

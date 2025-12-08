@@ -1,31 +1,26 @@
 #include "Service/JwtHandler.h"
-#include "Poco/JWT/Token.h"
-#include "Poco/JWT/Signer.h"
-#include "Poco/JWT/JWTException.h"
 #include "Poco/JSON/Object.h"
+#include "Poco/JWT/JWTException.h"
+#include "Poco/JWT/Signer.h"
+#include "Poco/JWT/Token.h"
 #include "Service/MessageBus.h"
 
 using namespace Service;
 
-POCO_IMPLEMENT_EXCEPTION(FailedToVerifyJwtException, Util::LogicException, "FailedToVerifyJwtException")
-POCO_IMPLEMENT_EXCEPTION(RefreshTokenExpiredJwtException, Util::BusinessException, "RefreshTokenExpiredJwtException")
-
-JwtHandler::JwtHandler(const std::string& secretKey, std::shared_ptr<Service::MessageBus> messageBus)
-    : _messageBus(std::move(messageBus))
-    , _signer(secretKey)
+JwtHandler::JwtHandler(const std::string& secretKey, Service::MessageBus& messageBus) :
+    _messageBus(messageBus), _signer(std::make_unique<Poco::JWT::Signer>(secretKey))
 {
 }
-
-std::shared_ptr<JwtHandler> JwtHandler::make(const std::string& secretKey, std::shared_ptr<Service::MessageBus> messageBus)
+JwtHandler JwtHandler::make(const std::string& secretKey, Service::MessageBus& messageBus)
 {
-    const auto self = std::shared_ptr<JwtHandler>(new JwtHandler(secretKey, std::move(messageBus)));
+    auto self = JwtHandler(secretKey, messageBus);
 
-    self->getMessageBus()->registerHandler<CreateJwtCommand>(self, &JwtHandler::execute);
-    self->getMessageBus()->registerHandler<VerifyJwtCommand>(self, &JwtHandler::execute);
+    self.getMessageBus().registerHandler<CreateJwtCommand>(self, &JwtHandler::execute);
+    self.getMessageBus().registerHandler<VerifyJwtCommand>(self, &JwtHandler::execute);
     return self;
 }
 
-CreateJwtResult JwtHandler::execute(const CreateJwtCommand& command) const
+CreateJwtCommand::Result JwtHandler::execute(const CreateJwtCommand& command) const
 {
     CreateJwtResult result;
     result.authToken = createAuthToken(command.id);
@@ -34,14 +29,15 @@ CreateJwtResult JwtHandler::execute(const CreateJwtCommand& command) const
     return result;
 }
 
-VerifyJwtResult JwtHandler::execute(const VerifyJwtCommand& command) const
+std::expected<VerifyJwtCommand::Result, VerifyJwtCommand::Error> JwtHandler::execute(
+    const VerifyJwtCommand& command) const
 {
     try
     {
         Poco::JWT::Token token = getSigner().verify(command.authToken);
         if (!token.payload().has("id"))
         {
-            throw FailedToVerifyJwtException();
+            return std::unexpected(FailedToVerifyJwtError());
         }
 
         return VerifyJwtResult{.id = token.payload().getValue<int>("id")};
@@ -53,7 +49,7 @@ VerifyJwtResult JwtHandler::execute(const VerifyJwtCommand& command) const
             Poco::JWT::Token token = getSigner().verify(command.refreshToken);
             if (!token.payload().has("id"))
             {
-                throw FailedToVerifyJwtException();
+                return std::unexpected(FailedToVerifyJwtError());
             }
             int id = token.payload().getValue<int>("id");
 
@@ -63,9 +59,11 @@ VerifyJwtResult JwtHandler::execute(const VerifyJwtCommand& command) const
         }
         catch (Poco::JWT::SignatureVerificationException&)
         {
-            throw RefreshTokenExpiredJwtException();
+            return std::unexpected(RefreshTokenExpiredJwtError());
         }
     }
+
+    return std::unexpected(Error::StrError());
 }
 
 std::string JwtHandler::createAuthToken(int id) const
@@ -87,7 +85,8 @@ std::string JwtHandler::createRefreshToken(int id) const
     // token.setSubject("");
     auth_token.payload().set("id", id);
     auth_token.setIssuedAt(Poco::Timestamp());
-    auth_token.setExpiration(Poco::Timestamp() + 7 * 24 * 60 * 60  * Poco::Timestamp::resolution()); // +7d
+    auth_token.setExpiration(Poco::Timestamp() +
+                             7 * 24 * 60 * 60 * Poco::Timestamp::resolution()); // +7d
 
     return getSigner().sign(auth_token, Poco::JWT::Signer::ALGO_HS256);
 }

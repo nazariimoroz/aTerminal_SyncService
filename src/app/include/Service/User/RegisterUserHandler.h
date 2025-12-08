@@ -12,13 +12,16 @@ namespace Poco
 {
     class Logger;
 }
-namespace Port::User
+
+namespace Service::User
 {
-    class IUserUpdatableStorage;
-}
-namespace Port
-{
-    class IUnitOfWork;
+    template <Port::User::UserUpdatableStorageC UserUpdatableStorageT>
+    class RegisterUserHandler;
+
+    template <Port::User::UserUpdatableStorageC UserUpdatableStorageT>
+    RegisterUserHandler<UserUpdatableStorageT> makeRegisterUserHandler(
+        Service::MessageBus& messageBus, UserUpdatableStorageT& userStorage,
+        Util::Crypto::PasswordHasher& passwordHasher);
 }
 
 namespace Service::User
@@ -34,39 +37,46 @@ namespace Service::User
         std::string rawPassword;
 
         using Result = RegisterUserResult;
+        using Error = std::variant<Error::StrError, Port::User::EmailAlreadyRegisteredError>;
     };
 
+    template <Port::User::UserUpdatableStorageC UserUpdatableStorageT>
     class RegisterUserHandler
     {
-        RegisterUserHandler(std::shared_ptr<Service::MessageBus> messageBus,
-                            std::shared_ptr<Port::User::IUserUpdatableStorage> userStorage,
-                            std::shared_ptr<Util::Crypto::PasswordHasher> passwordHasher);
+        RegisterUserHandler(Service::MessageBus& messageBus, UserUpdatableStorageT& userStorage,
+                            Util::Crypto::PasswordHasher& passwordHasher);
 
     public:
-        static std::shared_ptr<RegisterUserHandler> make(std::shared_ptr<Service::MessageBus> messageBus,
-                                                         std::shared_ptr<Port::User::IUserUpdatableStorage> userStorage,
-                                                         std::shared_ptr<Util::Crypto::PasswordHasher> passwordHasher);
+        RegisterUserHandler(RegisterUserHandler&&);
 
-        RegisterUserResult execute(const RegisterUserCommand& command);
+        template <Port::User::UserUpdatableStorageC UserUpdatableStorageT>
+        friend RegisterUserHandler<UserUpdatableStorageT> Service::User::makeRegisterUserHandler(
+            Service::MessageBus& messageBus, UserUpdatableStorageT& userStorage,
+            Util::Crypto::PasswordHasher& passwordHasher);
+
+        std::expected<RegisterUserCommand::Result, RegisterUserCommand::Error> execute(
+            const RegisterUserCommand& command);
 
     protected:
-        std::shared_ptr<Service::MessageBus> _messageBus;
-        const std::shared_ptr<Service::MessageBus>& getMessageBus() const
+        Service::MessageBus& _messageBus;
+        Service::MessageBus& getMessageBus() const
         {
             return _messageBus;
         }
 
-        std::shared_ptr<Port::User::IUserUpdatableStorage> _userStorage;
-        const std::shared_ptr<Port::User::IUserUpdatableStorage>& getUserStorage() const
+        UserUpdatableStorageT& _userStorage;
+        UserUpdatableStorageT& getUserStorage() const
         {
             return _userStorage;
         }
 
-        std::shared_ptr<Util::Crypto::PasswordHasher> _passwordHasher;
-        const std::shared_ptr<Util::Crypto::PasswordHasher>& getPasswordHasher() const
+        Util::Crypto::PasswordHasher& _passwordHasher;
+        const Util::Crypto::PasswordHasher& getPasswordHasher() const
         {
             return _passwordHasher;
         }
     };
 
 } // namespace Service::User
+
+#include "RegisterUserHandler.inl"

@@ -3,23 +3,21 @@
 #include <shared_mutex>
 #include <unordered_map>
 
+#include "InMemoryUserStorageUoW.h"
 #include "Port/User/UserUpdatableStorage.h"
-#include "Util/BusinessException.h"
 
 namespace Infra
 {
-    class InMemoryUserStorage final : public Port::User::IUserUpdatableStorage
+    class InMemoryUserStorage
     {
     public:
-        ~InMemoryUserStorage() override;
+        std::optional<Domain::User> findById(const int& id);
+        std::optional<Domain::User> findByEmail(const std::string& email);
+        bool existsByEmail(const std::string& email);
+        std::expected<void, Port::User::EmailAlreadyRegisteredError> add(Domain::User& user);
+        void update(const Domain::User& user);
 
-        std::optional<Domain::User> findById(const int& id) override;
-        std::optional<Domain::User> findByEmail(const std::string& email) override;
-        bool existsByEmail(const std::string& email) override;
-        void add(Domain::User& user) override;
-        void update(const Domain::User& user) override;
-
-        std::unique_ptr<Port::IUnitOfWork> beginWork() override;
+        InMemoryUserStorageUoW beginWork();
 
     protected:
         int generateId();
@@ -31,4 +29,8 @@ namespace Infra
         int _lastId = 0;
         mutable std::shared_mutex _mutex;
     };
+
+    static_assert(Port::User::UserStorageC<InMemoryUserStorage>);
+    static_assert(Port::User::UserUpdatableStorageC<InMemoryUserStorage>);
+
 } // namespace Infra

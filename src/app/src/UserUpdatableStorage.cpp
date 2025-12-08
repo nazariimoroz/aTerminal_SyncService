@@ -2,7 +2,3 @@
 
 using namespace Port::User;
 
-POCO_IMPLEMENT_EXCEPTION(EmailAlreadyRegisteredException, Util::BusinessException, "EmailAlreadyRegisteredException")
-
-IUserUpdatableStorage::~IUserUpdatableStorage() = default;
-

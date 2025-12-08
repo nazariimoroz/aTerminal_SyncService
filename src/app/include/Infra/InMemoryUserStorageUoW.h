@@ -5,7 +5,7 @@
 
 namespace Infra
 {
-    class InMemoryUserStorageUoW final : public Port::IUnitOfWork
+    class InMemoryUserStorageUoW
     {
     public:
         InMemoryUserStorageUoW()
@@ -13,13 +13,13 @@ namespace Infra
             , _committed(false)
         {}
 
-        ~InMemoryUserStorageUoW() override
+        ~InMemoryUserStorageUoW()
         {
             std::lock_guard lock(_mutex);
             _active = false;
         }
 
-        void commit() override
+        void commit()
         {
             std::lock_guard lock(_mutex);
             if (!_active) return;
@@ -27,7 +27,7 @@ namespace Infra
             _active    = false;
         }
 
-        void rollback() override
+        void rollback()
         {
             std::lock_guard lock(_mutex);
             if (!_active) return;
@@ -52,4 +52,6 @@ namespace Infra
         bool _active;
         bool _committed;
     };
+
+    static_assert(Port::UnitOfWorkC<InMemoryUserStorageUoW>);
 }

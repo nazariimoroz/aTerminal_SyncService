@@ -7,6 +7,8 @@
 #include <shared_mutex>
 #include <typeindex>
 #include <unordered_map>
+#include <expected>
+#include <type_traits>
 
 #include "Defines.h"
 #include "Util/LogicException.h"
@@ -14,7 +16,11 @@
 namespace Service
 {
     template <class T>
-    concept CommandC = requires { typename T::Result; };
+    concept CommandC = requires 
+    { 
+        typename T::Result;
+        typename T::Error; 
+    };
 
     class MessageBus
     {
@@ -23,66 +29,75 @@ namespace Service
         using ResultT = typename Cmd::Result;
 
         template <CommandC Cmd>
-        void registerHandler(std::function<ResultT<Cmd>(const Cmd&)> handler)
+        using ErrorT = typename Cmd::Error;
+
+        template <CommandC Cmd, bool HasError = !std::is_void_v<ErrorT<Cmd>>>
+        struct ExpectedSelector;
+
+        template <CommandC Cmd>
+        struct ExpectedSelector<Cmd, false> {
+            using type = ResultT<Cmd>;
+        };
+
+        template <CommandC Cmd>
+        struct ExpectedSelector<Cmd, true> {
+            using type = std::expected<ResultT<Cmd>, ErrorT<Cmd>>;
+        };
+
+        template <CommandC Cmd>
+        using ExpectedT = typename ExpectedSelector<Cmd>::type;
+
+        template <CommandC Cmd, class Obj>
+        using MethodT = ExpectedT<Cmd> (std::remove_reference_t<Obj> ::*) (const Cmd&);
+
+        template <CommandC Cmd, class Obj>
+        using ConstMethodT = ExpectedT<Cmd> (std::remove_reference_t<Obj> ::*) (const Cmd&) const;
+        
+
+        template <CommandC Cmd, Defines::InvocableC<ExpectedT<Cmd>, const Cmd&> CallbackT>
+        void registerHandler(CallbackT&& callback)
         {
             std::unique_lock lock(_mutex);
-
             const std::type_index key = typeid(Cmd);
 
-            _handlers[key] = [handler = std::move(handler)](const void* rawCmd) -> std::any
+            _handlers[key] = [callback = std::forward<CallbackT>(callback)](const void* rawCmd) -> std::any
             {
                 const Cmd& cmd = *static_cast<const Cmd*>(rawCmd);
-                ResultT<Cmd> r = handler(cmd);
+                ExpectedT<Cmd> r = std::invoke(callback, cmd);
                 return std::any(std::move(r));
             };
         }
 
         template <CommandC Cmd, class Obj>
-        void registerHandler(std::shared_ptr<Obj> obj, ResultT<Cmd> (Obj::*method)(const Cmd&))
+        void registerHandler(Obj& obj, MethodT<Cmd, Obj> method)
         {
             std::unique_lock lock(_mutex);
             const std::type_index key = typeid(Cmd);
 
-            std::weak_ptr<Obj> weak = std::move(obj);
-
-            _handlers[key] = [weak, method](const void* rawCmd) -> std::any
+            _handlers[key] = [&obj, method](const void* rawCmd) -> std::any
             {
-                auto locked = weak.lock();
-                if (!locked)
-                {
-                    throw Util::LogicException("Handler object is no longer available");
-                }
-
                 const Cmd& cmd = *static_cast<const Cmd*>(rawCmd);
-                ResultT<Cmd> r = ((*locked).*method)(cmd);
+                ExpectedT<Cmd> r = std::invoke(method, &obj, cmd);
                 return std::any(std::move(r));
             };
         }
 
         template <CommandC Cmd, class Obj>
-        void registerHandler(std::shared_ptr<Obj> obj, ResultT<Cmd> (Obj::*method)(const Cmd&) const)
+        void registerHandler(Obj& obj, ConstMethodT<Cmd, Obj> method)
         {
             std::unique_lock lock(_mutex);
             const std::type_index key = typeid(Cmd);
 
-            std::weak_ptr<Obj> weak = std::move(obj);
-
-            _handlers[key] = [weak, method](const void* rawCmd) -> std::any
+            _handlers[key] = [&obj, method](const void* rawCmd) -> std::any
             {
-                auto locked = weak.lock();
-                if (!locked)
-                {
-                    throw Util::LogicException("Handler object is no longer available");
-                }
-
                 const Cmd& cmd = *static_cast<const Cmd*>(rawCmd);
-                ResultT<Cmd> r = ((*locked).*method)(cmd);
+                ExpectedT<Cmd> r = std::invoke(method, &obj, cmd);
                 return std::any(std::move(r));
             };
         }
 
         template <CommandC Cmd>
-        ResultT<Cmd> call(const Cmd& cmd)
+        ExpectedT<Cmd> call(const Cmd& cmd)
         {
             std::function<std::any(const void*)> fn;
 
@@ -96,8 +111,8 @@ namespace Service
                 fn = it->second;
             }
 
-            std::any boxed = fn(&cmd);
-            return std::any_cast<ResultT<Cmd>>(boxed);
+            std::any boxed = std::invoke(fn, &cmd);
+            return std::any_cast<ExpectedT<Cmd>>(boxed);
         }
 
     private:

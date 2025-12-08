@@ -1,0 +1,8 @@
+{
+    "cmake.additionalCompilerSearchDirs": [
+        "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\"
+    ],
+    "cmake.useCMakePresets": "always",
+    "cmake.cmakePath": "C:\\Program Files\\CMake\\bin\\cmake.exe",
+     "cmake.useVsDeveloperEnvironment": "always"
+}

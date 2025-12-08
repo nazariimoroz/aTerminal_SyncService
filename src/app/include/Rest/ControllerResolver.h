@@ -1,21 +1,21 @@
 #pragma once
+#include <concepts>
 
 namespace Poco
 {
+    namespace Net
+    {
+        class HTTPRequestHandler;
+    }
     class URI;
-}
-namespace Poco::Net
-{
-    class HTTPRequestHandler;
 }
 
 namespace Rest
 {
-    class ControllerResolver
+    template<class T>
+    concept ControllerResolverC = requires (T t, const Poco::URI& uri)
     {
-    public:
-        virtual ~ControllerResolver() = default;
-        virtual bool match(const Poco::URI& uri) const = 0;
-        virtual Poco::Net::HTTPRequestHandler* make() const = 0;
+        { t.match(uri) } -> std::same_as<bool>;
+        { t.make() } -> std::same_as<Poco::Net::HTTPRequestHandler*>;
     };
 }
