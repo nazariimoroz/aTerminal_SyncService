@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Service/User/RegisterUserHandler.h"
+#include "Service/User/AuthUserViaGoogleHandler.h"
 
 #include <Poco/Logger.h>
 #include <stdexcept>
@@ -13,7 +13,7 @@
 namespace Service::User
 {
     template <Port::User::UserUpdatableStorageC UserUpdatableStorageT>
-    RegisterUserHandler<UserUpdatableStorageT>::RegisterUserHandler(
+    AuthUserViaGoogleHandler<UserUpdatableStorageT>::AuthUserViaGoogleHandler(
         Service::MessageBus& messageBus, UserUpdatableStorageT& userStorage,
         Util::Crypto::PasswordHasher& passwordHasher) :
         _messageBus(messageBus), _userStorage(userStorage), _passwordHasher(passwordHasher)
@@ -21,24 +21,24 @@ namespace Service::User
     }
 
     template <Port::User::UserUpdatableStorageC UserUpdatableStorageT>
-    RegisterUserHandler<UserUpdatableStorageT>::RegisterUserHandler(RegisterUserHandler&&) =
+    AuthUserViaGoogleHandler<UserUpdatableStorageT>::AuthUserViaGoogleHandler(AuthUserViaGoogleHandler&&) =
         default;
 
     template <Port::User::UserUpdatableStorageC UserUpdatableStorageT>
-    RegisterUserHandler<UserUpdatableStorageT> makeRegisterUserHandler(
+    AuthUserViaGoogleHandler<UserUpdatableStorageT> makeAuthUserViaGoogleHandler(
         Service::MessageBus& messageBus, UserUpdatableStorageT& userStorage,
         Util::Crypto::PasswordHasher& passwordHasher)
     {
-        using RegisterUserHandlerT = RegisterUserHandler<UserUpdatableStorageT>;
-        auto self = RegisterUserHandlerT(messageBus, userStorage, passwordHasher);
+        using AuthUserViaGoogleHandlerT = AuthUserViaGoogleHandler<UserUpdatableStorageT>;
+        auto self = AuthUserViaGoogleHandlerT(messageBus, userStorage, passwordHasher);
 
-        self.getMessageBus().template registerHandler<RegisterUserCommand>(self, &RegisterUserHandlerT::execute);
+        self.getMessageBus().template registerHandler<AuthUserViaGoogleCommand>(self, &AuthUserViaGoogleHandlerT::execute);
         return self;
     }
 
     template <Port::User::UserUpdatableStorageC UserUpdatableStorageT>
-    std::expected<RegisterUserCommand::Result, RegisterUserCommand::Error> RegisterUserHandler<
-        UserUpdatableStorageT>::execute(const RegisterUserCommand& command)
+    std::expected<AuthUserViaGoogleCommand::Result, AuthUserViaGoogleCommand::Error> AuthUserViaGoogleHandler<
+        UserUpdatableStorageT>::execute(const AuthUserViaGoogleCommand& command)
     {
         auto uow = getUserStorage().beginWork();
 
@@ -60,7 +60,7 @@ namespace Service::User
                 [&]
                 {
                     uow.commit();
-                    return RegisterUserResult{
+                    return AuthUserViaGoogleResult{
                         .userId = user.getId(),
                     };
                 })
@@ -71,3 +71,4 @@ namespace Service::User
             });
     }
 } // namespace Service::User
+

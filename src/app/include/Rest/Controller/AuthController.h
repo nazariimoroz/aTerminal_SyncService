@@ -15,16 +15,11 @@ namespace Poco
 
 namespace Rest::Controller
 {
-    struct RegisterAuthRequestDto
+    struct AuthUserViaGoogleDto
     {
-        rfl::Email email;
-        Defines::Password password;
-    };
-
-    struct LoginAuthRequestDto
-    {
-        rfl::Email email;
-        Defines::Password password;
+        std::string code;
+        std::string code_verifier;
+        std::string redirect_uri;
     };
 
 
@@ -36,7 +31,7 @@ namespace Rest::Controller
         void handleRequest(Poco::Net::HTTPServerRequest& request, Poco::Net::HTTPServerResponse& response) override;
 
     protected:
-        void registerUser(Poco::Net::HTTPServerRequest& request, Poco::Net::HTTPServerResponse& response);
+        void authUserViaGoogle(Poco::Net::HTTPServerRequest& request, Poco::Net::HTTPServerResponse& response);
         void loginUser(Poco::Net::HTTPServerRequest& request, Poco::Net::HTTPServerResponse& response);
 
     protected:

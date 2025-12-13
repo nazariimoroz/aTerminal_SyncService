@@ -2,3 +2,5 @@ cmake-build-*
 third_party
 .idea
 build
+out
+vcpkg_installed

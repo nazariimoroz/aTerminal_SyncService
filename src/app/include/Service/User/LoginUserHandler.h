@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Poco/Exception.h>
-#include <memory>
 #include <string>
 
 #include "Port/User/UserUpdatableStorage.h"
@@ -53,9 +52,9 @@ namespace Service::User
     public:
         LoginUserHandler(LoginUserHandler&&);
 
-        template <Port::User::UserStorageC UserStorageT>
-        friend LoginUserHandler<UserStorageT> Service::User::makeLoginUserHandler(
-            Service::MessageBus& messageBus, UserStorageT& userStorage,
+        template <Port::User::UserStorageC InnerUserStorageT>
+        friend LoginUserHandler<InnerUserStorageT> Service::User::makeLoginUserHandler(
+            Service::MessageBus& messageBus, InnerUserStorageT& userStorage,
             Util::Crypto::PasswordHasher& passwordHasher);
 
         std::expected<LoginUserCommand::Result, LoginUserCommand::Error> execute(

@@ -27,19 +27,14 @@ void AuthController::handleRequest(Poco::Net::HTTPServerRequest& request,
 {
     response.setContentType("application/json");
 
-    const auto [_, f] = ctre::match<R"(^/api/v0/auth/(register|login)/?$)">(request.getURI());
+    const auto [_, f] = ctre::match<R"(^/api/v0/auth/(google)/?$)">(request.getURI());
     const auto m = request.getMethod();
 
     if (m == "POST")
     {
-        if (f == "register")
+        if (f == "google")
         {
-            registerUser(request, response);
-            return;
-        }
-        else if (f == "login")
-        {
-            loginUser(request, response);
+            authUserViaGoogle(request, response);
             return;
         }
     }
@@ -48,14 +43,14 @@ void AuthController::handleRequest(Poco::Net::HTTPServerRequest& request,
     response.send() << rfl::json::write(Defines::ErrorDTO("Method Not Allowed"));
 }
 
-void AuthController::registerUser(Poco::Net::HTTPServerRequest& request,
+void AuthController::authUserViaGoogle(Poco::Net::HTTPServerRequest& request,
     Poco::Net::HTTPServerResponse& response)
 {
     std::stringstream bodyBuffer;
     Poco::StreamCopier::copyStream(request.stream(), bodyBuffer);
     const std::string rawBody = bodyBuffer.str();
 
-    auto dto = rfl::json::read<RegisterAuthRequestDto>(rawBody);
+    auto dto = rfl::json::read<AuthUserViaGoogleDto>(rawBody);
     if (!dto)
     {
         response.setStatus(Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
@@ -109,46 +104,46 @@ void AuthController::registerUser(Poco::Net::HTTPServerRequest& request,
 void AuthController::loginUser(Poco::Net::HTTPServerRequest& request,
                                                  Poco::Net::HTTPServerResponse& response)
 {
-    std::stringstream bodyBuffer;
-    Poco::StreamCopier::copyStream(request.stream(), bodyBuffer);
-    const std::string rawBody = bodyBuffer.str();
-
-    auto dto = rfl::json::read<LoginAuthRequestDto>(rawBody);
-    if (!dto)
-    {
-        response.setStatus(Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
-        response.send() << rfl::json::write(Defines::ErrorDTO(dto.error().what()));
-        return;
-    }
-
-    /** Main login logic */
-    Service::User::LoginUserCommand loginUserCommand;
-    loginUserCommand.email = std::move(dto->email.value());
-    loginUserCommand.rawPassword = std::move(dto->password.value());
-    const auto loginUserResult = getMessageBus().call(loginUserCommand);
-    if (!loginUserResult)
-    {
-        response.setStatus(Poco::Net::HTTPResponse::HTTP_UNAUTHORIZED);
-        response.send() << rfl::json::write(Defines::ErrorDTO(std::string(loginUserResult.error().errorMessage)));
-        return;
-    }
-
-    /** JWT logic */
-    Service::CreateJwtCommand createJwtCommand {};
-    createJwtCommand.id = loginUserResult->userId;
-    const auto createJwtResult = getMessageBus().call(createJwtCommand);
-
-    /** Response */
-    response.set("Authorization", "Bearer " + createJwtResult.authToken);
-
-    Poco::Net::HTTPCookie cookie("refresh_token", createJwtResult.refreshToken);
-    cookie.setHttpOnly(true);
-    cookie.setSecure(true);
-    cookie.setPath("/");
-    cookie.setMaxAge(7 * 24 * 60 * 60);
-    cookie.setSameSite(Poco::Net::HTTPCookie::SAME_SITE_STRICT);
-    response.addCookie(cookie);
-
-    response.setStatus(Poco::Net::HTTPResponse::HTTP_CREATED);
-    response.send();
+    // std::stringstream bodyBuffer;
+    // Poco::StreamCopier::copyStream(request.stream(), bodyBuffer);
+    // const std::string rawBody = bodyBuffer.str();
+// 
+    // auto dto = rfl::json::read<AuthUserViaGoogleDto>(rawBody);
+    // if (!dto)
+    // {
+    //     response.setStatus(Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+    //     response.send() << rfl::json::write(Defines::ErrorDTO(dto.error().what()));
+    //     return;
+    // }
+// 
+    // /** Main login logic */
+    // Service::User::LoginUserCommand loginUserCommand;
+    // loginUserCommand.email = std::move(dto->email.value());
+    // loginUserCommand.rawPassword = std::move(dto->password.value());
+    // const auto loginUserResult = getMessageBus().call(loginUserCommand);
+    // if (!loginUserResult)
+    // {
+    //     response.setStatus(Poco::Net::HTTPResponse::HTTP_UNAUTHORIZED);
+    //     response.send() << rfl::json::write(Defines::ErrorDTO(std::string(loginUserResult.error().errorMessage)));
+    //     return;
+    // }
+// 
+    // /** JWT logic */
+    // Service::CreateJwtCommand createJwtCommand {};
+    // createJwtCommand.id = loginUserResult->userId;
+    // const auto createJwtResult = getMessageBus().call(createJwtCommand);
+// 
+    // /** Response */
+    // response.set("Authorization", "Bearer " + createJwtResult.authToken);
+// 
+    // Poco::Net::HTTPCookie cookie("refresh_token", createJwtResult.refreshToken);
+    // cookie.setHttpOnly(true);
+    // cookie.setSecure(true);
+    // cookie.setPath("/");
+    // cookie.setMaxAge(7 * 24 * 60 * 60);
+    // cookie.setSameSite(Poco::Net::HTTPCookie::SAME_SITE_STRICT);
+    // response.addCookie(cookie);
+// 
+    // response.setStatus(Poco::Net::HTTPResponse::HTTP_CREATED);
+    // response.send();
 }

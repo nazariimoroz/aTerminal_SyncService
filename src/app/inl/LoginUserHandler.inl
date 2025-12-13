@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Service/User/LoginUserHandler.h"
+
 #include <optional>
 #include <stdexcept>
 
@@ -26,7 +28,7 @@ namespace Service::User
 
         auto self = LoginUserHandlerT(messageBus, userStorage, passwordHasher);
 
-        self.getMessageBus().registerHandler<LoginUserCommand>(self, &LoginUserHandlerT::execute);
+        self.getMessageBus().template registerHandler<LoginUserCommand>(self, &LoginUserHandlerT::execute);
         return self;
     }
 

@@ -17,46 +17,46 @@ namespace Poco
 namespace Service::User
 {
     template <Port::User::UserUpdatableStorageC UserUpdatableStorageT>
-    class RegisterUserHandler;
+    class AuthUserViaGoogleHandler;
 
     template <Port::User::UserUpdatableStorageC UserUpdatableStorageT>
-    RegisterUserHandler<UserUpdatableStorageT> makeRegisterUserHandler(
+    AuthUserViaGoogleHandler<UserUpdatableStorageT> makeAuthUserViaGoogleHandler(
         Service::MessageBus& messageBus, UserUpdatableStorageT& userStorage,
         Util::Crypto::PasswordHasher& passwordHasher);
 }
 
 namespace Service::User
 {
-    struct RegisterUserResult
+    struct AuthUserViaGoogleResult
     {
         int userId;
     };
 
-    struct RegisterUserCommand
+    struct AuthUserViaGoogleCommand
     {
-        std::string email;
-        std::string rawPassword;
+        std::string code;
+        std::string code_verifier;
 
-        using Result = RegisterUserResult;
+        using Result = AuthUserViaGoogleResult;
         using Error = std::variant<Error::StrError, Port::User::EmailAlreadyRegisteredError>;
     };
 
     template <Port::User::UserUpdatableStorageC UserUpdatableStorageT>
-    class RegisterUserHandler
+    class AuthUserViaGoogleHandler
     {
-        RegisterUserHandler(Service::MessageBus& messageBus, UserUpdatableStorageT& userStorage,
+        AuthUserViaGoogleHandler(Service::MessageBus& messageBus, UserUpdatableStorageT& userStorage,
                             Util::Crypto::PasswordHasher& passwordHasher);
 
     public:
-        RegisterUserHandler(RegisterUserHandler&&);
+        AuthUserViaGoogleHandler(AuthUserViaGoogleHandler&&);
 
         template <Port::User::UserUpdatableStorageC InnerUserUpdatableStorageT>
-        friend RegisterUserHandler<InnerUserUpdatableStorageT> Service::User::makeRegisterUserHandler(
+        friend AuthUserViaGoogleHandler<InnerUserUpdatableStorageT> Service::User::makeAuthUserViaGoogleHandler(
             Service::MessageBus& messageBus, InnerUserUpdatableStorageT& userStorage,
             Util::Crypto::PasswordHasher& passwordHasher);
 
-        std::expected<RegisterUserCommand::Result, RegisterUserCommand::Error> execute(
-            const RegisterUserCommand& command);
+        std::expected<AuthUserViaGoogleCommand::Result, AuthUserViaGoogleCommand::Error> execute(
+            const AuthUserViaGoogleCommand& command);
 
     protected:
         Service::MessageBus& _messageBus;
@@ -80,4 +80,4 @@ namespace Service::User
 
 } // namespace Service::User
 
-#include "RegisterUserHandler.inl"
+#include "AuthUserViaGoogleHandler.inl"
