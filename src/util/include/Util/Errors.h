@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 #include <string_view>
 
 namespace Error
@@ -6,8 +7,17 @@ namespace Error
     struct StrError
     {
         StrError() = default;
-        StrError(std::string_view inErrorMessage) : errorMessage(std::move(inErrorMessage)) {}
+        explicit StrError(std::string_view inErrorMessage) : errorMessage(std::move(inErrorMessage)) {}
 
         std::string_view errorMessage;
+    };
+
+    struct MutStrError
+    {
+        MutStrError() = default;
+        explicit MutStrError(const StrError& error) : errorMessage(error.errorMessage) {}
+        explicit MutStrError(std::string inErrorMessage) : errorMessage(std::move(inErrorMessage)) {}
+
+        std::string errorMessage;
     };
 }

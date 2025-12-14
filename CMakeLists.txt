@@ -7,7 +7,7 @@ option(SYNC_SERVICE_ENABLE_TESTS "Build and run unit tests" ON)
 
 list(PREPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
-find_package(Poco REQUIRED COMPONENTS Foundation Util Data Net JWT)
+find_package(Poco REQUIRED COMPONENTS Foundation Util Data Net JWT NetSSL)
 find_package(ReflectCpp REQUIRED)
 find_package(stduuid CONFIG REQUIRED)
 find_package(ctre CONFIG REQUIRED)

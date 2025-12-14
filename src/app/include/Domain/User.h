@@ -3,6 +3,11 @@
 
 namespace Domain
 {
+    enum class VerificationMethod : std::uint8_t
+    {
+        Password, Google
+    };
+
     class User
     {
     public:
@@ -33,9 +38,19 @@ namespace Domain
             _password = std::move(password);
         }
 
+        void setVerificationMethod(VerificationMethod verificationMethod)
+        {
+            _verificationMethod = verificationMethod;
+        }
+        VerificationMethod getVerificationMethod() const
+        {
+            return _verificationMethod;
+        }
+
     protected:
         int _id = 0;
         std::string _email;
         std::vector<char> _password;
+        VerificationMethod _verificationMethod = VerificationMethod::Password;
     };
 } // namespace Domain

@@ -14,7 +14,7 @@ AuthControllerResolver::AuthControllerResolver(Service::MessageBus& messageBus,
 
 bool AuthControllerResolver::match(const Poco::URI& uri) const
 {
-    return ctre::match<R"(^/api/v0/auth/(?:google)/?$)">(uri.getPath());
+    return ctre::match<R"(^/api/v0/auth/(?:google|refresh)/?$)">(uri.getPath());
 }
 
 Poco::Net::HTTPRequestHandler* AuthControllerResolver::make() const

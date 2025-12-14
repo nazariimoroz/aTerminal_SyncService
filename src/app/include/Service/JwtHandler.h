@@ -15,7 +15,10 @@ namespace Service
 
 namespace Service
 {
-    struct FailedToVerifyJwtError
+    struct AuthTokenExpiredError
+    {
+    };
+    struct FailedToRefreshJwtError
     {
     };
     struct RefreshTokenExpiredJwtError
@@ -35,20 +38,32 @@ namespace Service
         using Error = void;
     };
 
-    struct VerifyJwtResult
+    struct RetrieveIdResult
     {
-        int id = 0;
-
-        std::optional<std::string> newAuthToken;
+        int id;
     };
-    struct VerifyJwtCommand
+    struct RetrieveIdCommand
+    {
+        std::string authToken;
+
+        using Result = RetrieveIdResult;
+        using Error =
+            std::variant<Error::StrError, AuthTokenExpiredError>;
+    };
+
+    struct RefreshJwtResult
+    {
+        std::string newAuthToken;
+        std::string newRefreshToken;
+    };
+    struct RefreshJwtCommand
     {
         std::string authToken;
         std::string refreshToken;
 
-        using Result = VerifyJwtResult;
+        using Result = RefreshJwtResult;
         using Error =
-            std::variant<Error::StrError, FailedToVerifyJwtError, RefreshTokenExpiredJwtError>;
+            std::variant<Error::StrError, FailedToRefreshJwtError, RefreshTokenExpiredJwtError>;
     };
 
 
@@ -61,8 +76,11 @@ namespace Service
 
         CreateJwtCommand::Result execute(const CreateJwtCommand& command) const;
 
-        std::expected<VerifyJwtCommand::Result, VerifyJwtCommand::Error> execute(
-            const VerifyJwtCommand& command) const;
+        std::expected<RetrieveIdCommand::Result, RetrieveIdCommand::Error> execute(
+            const RetrieveIdCommand& command) const;
+
+        std::expected<RefreshJwtCommand::Result, RefreshJwtCommand::Error> execute(
+            const RefreshJwtCommand& command) const;
 
     protected:
         std::string createAuthToken(int id) const;

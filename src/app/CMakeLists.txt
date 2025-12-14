@@ -17,6 +17,7 @@ target_link_libraries(${PROJECT_NAME}_lib
         Poco::Util
         Poco::Data
         Poco::Net
+        Poco::NetSSL
 
         PRIVATE
         ctre::ctre

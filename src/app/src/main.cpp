@@ -4,12 +4,14 @@
 #include <Poco/Util/Application.h>
 #include <Poco/Util/ServerApplication.h>
 
+#include "Infra/GoogleAuthKeyHandler.h"
 #include "Infra/InMemoryUserStorage.h"
 #include "Rest/Controller/AuthController.h"
 #include "Rest/RequestRouter.h"
 #include "Rest/Resolver/AuthControllerResolver.h"
 #include "Service/JwtHandler.h"
 #include "Service/MessageBus.h"
+#include "Service/User/AuthUserViaGoogleHandler.h"
 #include "Service/User/LoginUserHandler.h"
 #include "Service/User/RegisterUserHandler.h"
 #include "Util/Crypto/PasswordHasher.h"
@@ -26,6 +28,8 @@ public:
 protected:
     std::uint32_t HTTP_PORT;
     std::string JWT_SECRET;
+    std::string GOOGLE_CLIENT_ID;
+    std::string GOOGLE_CLIENT_SECRETS;
 
 protected:
     void defineOptions(Poco::Util::OptionSet& options) override
@@ -55,6 +59,8 @@ protected:
         /** Set config params */
         HTTP_PORT = config().getInt("http.port", 8080);
         JWT_SECRET = config().getString("jwt.secret_key", "testtesttest");
+        GOOGLE_CLIENT_ID = config().getString("google.client_id");
+        GOOGLE_CLIENT_SECRETS = config().getString("google.client_secrets");
 
         logger().information("initialize");
     }
@@ -73,14 +79,13 @@ protected:
 
         /** Init Infra */
         auto userStorage = Infra::InMemoryUserStorage();
+        auto googleAuthKeyHandler = Infra::GoogleAuthKeyHandler(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRETS, logger());
 
         /** Init Services */
         auto messageBus = Service::MessageBus();
         auto jwtHandler = Service::JwtHandler::make(JWT_SECRET, messageBus);
-        const auto registerUserHandler =
-            Service::User::makeRegisterUserHandler(messageBus, userStorage, passwordHasher);
-        const auto loginUserHandler =
-            Service::User::makeLoginUserHandler(messageBus, userStorage, passwordHasher);
+        const auto authUserViaGoogleHandler =
+            Service::User::makeAuthUserViaGoogleHandler(messageBus, userStorage, googleAuthKeyHandler);
 
         /** Init REST Server */
         const auto restSoket = Poco::Net::ServerSocket(HTTP_PORT);
@@ -95,12 +100,12 @@ protected:
             restControllerResolvers, Rest::Resolver::NotFoundControllerResolver());
         auto restServer = Poco::Net::HTTPServer(restRequestRouter, restSoket, restParams);
 
-        logger().information("Starting REST server localhost:" + std::to_string(HTTP_PORT));
+        logger().information("Starting REST server 0.0.0.0:" + std::to_string(HTTP_PORT));
         restServer.start();
 
         waitForTerminationRequest();
 
-        logger().information("Shutting down HTTP server...");
+        logger().information("Shutting down REST server...");
         restServer.stop();
 
         return Application::EXIT_OK;

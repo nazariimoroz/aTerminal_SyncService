@@ -16,7 +16,8 @@ JwtHandler JwtHandler::make(const std::string& secretKey, Service::MessageBus& m
     auto self = JwtHandler(secretKey, messageBus);
 
     self.getMessageBus().registerHandler<CreateJwtCommand>(self, &JwtHandler::execute);
-    self.getMessageBus().registerHandler<VerifyJwtCommand>(self, &JwtHandler::execute);
+    self.getMessageBus().registerHandler<RetrieveIdCommand>(self, &JwtHandler::execute);
+    self.getMessageBus().registerHandler<RefreshJwtCommand>(self, &JwtHandler::execute);
     return self;
 }
 
@@ -29,18 +30,43 @@ CreateJwtCommand::Result JwtHandler::execute(const CreateJwtCommand& command) co
     return result;
 }
 
-std::expected<VerifyJwtCommand::Result, VerifyJwtCommand::Error> JwtHandler::execute(
-    const VerifyJwtCommand& command) const
+std::expected<RetrieveIdCommand::Result, RetrieveIdCommand::Error> JwtHandler::execute(
+    const RetrieveIdCommand& command) const
 {
     try
     {
         Poco::JWT::Token token = getSigner().verify(command.authToken);
         if (!token.payload().has("id"))
         {
-            return std::unexpected(FailedToVerifyJwtError());
+            return std::unexpected(Error::StrError("Failed to retrieve id from token"));
+        }
+        int id = token.payload().getValue<int>("id");
+
+        return RetrieveIdResult{
+            .id = id
+        };
+    }
+    catch (Poco::JWT::SignatureVerificationException&)
+    {
+        return std::unexpected(AuthTokenExpiredError());
+    }
+}
+
+std::expected<RefreshJwtCommand::Result, RefreshJwtCommand::Error> JwtHandler::execute(
+    const RefreshJwtCommand& command) const
+{
+    try
+    {
+        Poco::JWT::Token token = getSigner().verify(command.authToken);
+        if (!token.payload().has("id"))
+        {
+            return std::unexpected(FailedToRefreshJwtError());
         }
 
-        return VerifyJwtResult{.id = token.payload().getValue<int>("id")};
+        return RefreshJwtResult{
+            .newAuthToken = command.authToken,
+            .newRefreshToken = command.refreshToken
+        };
     }
     catch (Poco::JWT::SignatureVerificationException&)
     {
@@ -49,13 +75,16 @@ std::expected<VerifyJwtCommand::Result, VerifyJwtCommand::Error> JwtHandler::exe
             Poco::JWT::Token token = getSigner().verify(command.refreshToken);
             if (!token.payload().has("id"))
             {
-                return std::unexpected(FailedToVerifyJwtError());
+                return std::unexpected(FailedToRefreshJwtError());
             }
             int id = token.payload().getValue<int>("id");
 
             auto authToken = createAuthToken(id);
 
-            return VerifyJwtResult{.id = id, .newAuthToken = authToken};
+            return RefreshJwtResult{
+                .newAuthToken = authToken,
+                .newRefreshToken = command.refreshToken
+            };
         }
         catch (Poco::JWT::SignatureVerificationException&)
         {

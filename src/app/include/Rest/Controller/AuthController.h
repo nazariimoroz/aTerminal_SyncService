@@ -2,6 +2,7 @@
 #include <Poco/Net/HTTPRequestHandler.h>
 
 #include "Defines.h"
+#include "rfl/Rename.hpp"
 #include "rfl/patterns.hpp"
 
 namespace Service
@@ -15,11 +16,30 @@ namespace Poco
 
 namespace Rest::Controller
 {
-    struct AuthUserViaGoogleDto
+    struct AuthUserViaGoogleRequest
     {
         std::string code;
-        std::string code_verifier;
-        std::string redirect_uri;
+        rfl::Rename<"code_verifier", std::string> codeVerifier;
+        rfl::Rename<"redirect_uri", std::string> redirectUri;
+    };
+
+    struct AuthUserViaGoogleResponse
+    {
+        rfl::Rename<"auth_token", std::string> authToken;
+        rfl::Rename<"refresh_token", std::string> refreshToken;
+    };
+
+
+    struct RefreshAuthRequest
+    {
+        rfl::Rename<"auth_token", std::string> authToken;
+        rfl::Rename<"refresh_token", std::string> refreshToken;
+    };
+
+    struct RefreshAuthResponse
+    {
+        rfl::Rename<"auth_token", std::string> authToken;
+        rfl::Rename<"refresh_token", std::string> refreshToken;
     };
 
 
@@ -32,7 +52,7 @@ namespace Rest::Controller
 
     protected:
         void authUserViaGoogle(Poco::Net::HTTPServerRequest& request, Poco::Net::HTTPServerResponse& response);
-        void loginUser(Poco::Net::HTTPServerRequest& request, Poco::Net::HTTPServerResponse& response);
+        void refreshAuth(Poco::Net::HTTPServerRequest& request, Poco::Net::HTTPServerResponse& response);
 
     protected:
         Service::MessageBus& _messageBus;

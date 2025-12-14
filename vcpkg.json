@@ -9,7 +9,8 @@
         "data",
         "util",
         "net",
-        "jwt"
+        "jwt",
+        "netssl"
       ]
     },
     {

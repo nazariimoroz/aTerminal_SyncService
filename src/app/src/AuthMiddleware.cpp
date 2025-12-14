@@ -33,42 +33,15 @@ std::expected<AuthMiddlewareResult, AuthFailedError> AuthMiddleware::execute(
         });
     if (!authToken) return std::unexpected(authToken.error());
 
-    auto refreshToken = std::invoke(
-        [&]() -> std::expected<std::string, AuthFailedError>
-        {
-            Poco::Net::NameValueCollection cookies;
-            request.getCookies(cookies);
-
-            std::string token;
-            try
-            {
-                token = cookies.get("refresh_token");
-            }
-            catch (Poco::NotFoundException&)
-            {
-                return std::unexpected(AuthFailedError());
-            }
-
-            return token;
-        });
-    if (!refreshToken) return std::unexpected(authToken.error());
-
     const auto verifyResult = std::invoke(
-        [&] () -> std::expected<Service::VerifyJwtResult, AuthFailedError>
+        [&] () -> std::expected<Service::RetrieveIdResult, AuthFailedError>
         {
-            Service::VerifyJwtCommand verifyCommand;
-            verifyCommand.authToken = std::move(*authToken);
-            verifyCommand.refreshToken = std::move(*refreshToken);
-            return getMessageBus().call(verifyCommand)
+            Service::RetrieveIdCommand retrieveIdCommand;
+            retrieveIdCommand.authToken = std::move(*authToken);
+            return getMessageBus().call(retrieveIdCommand)
                 .transform_error([](auto&& error){ return AuthFailedError(); });
         });
     if (!verifyResult) return std::unexpected(verifyResult.error());
-
-    /** Set new auth token */
-    if (verifyResult->newAuthToken)
-    {
-        response.set("Authorization", "Bearer " + *verifyResult->newAuthToken);
-    }
 
     return AuthMiddlewareResult{.id = verifyResult->id};
 }
