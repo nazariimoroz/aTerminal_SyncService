@@ -4,3 +4,4 @@ third_party
 build
 out
 vcpkg_installed
+config
