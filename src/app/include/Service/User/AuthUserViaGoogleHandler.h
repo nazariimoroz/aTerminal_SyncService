@@ -1,6 +1,6 @@
 #pragma once
-#include <string>
 #include <rfl/Rename.hpp>
+#include <string>
 
 #include "Port/User/AuthKeyHandler.h"
 #include "Port/User/UserUpdatableStorage.h"
@@ -38,14 +38,17 @@ namespace Service::User
 
     template <Port::User::AuthKeyHandlerC AuthKeyHandlerT,
               Port::User::UserUpdatableStorageC UserUpdatableStorageT>
-    AuthUserViaGoogleHandler<AuthKeyHandlerT, UserUpdatableStorageT> makeAuthUserViaGoogleHandler(
-        Service::MessageBus& messageBus, UserUpdatableStorageT& userStorage,
-        AuthKeyHandlerT& authKeyHandler)
+    std::shared_ptr<AuthUserViaGoogleHandler<AuthKeyHandlerT, UserUpdatableStorageT>>
+    makeAuthUserViaGoogleHandler(Service::MessageBus& messageBus,
+                                 UserUpdatableStorageT& userStorage,
+                                 AuthKeyHandlerT& authKeyHandler)
     {
-        using AuthUserViaGoogleHandlerT = AuthUserViaGoogleHandler<AuthKeyHandlerT, UserUpdatableStorageT>;
-        auto self = AuthUserViaGoogleHandlerT(messageBus, userStorage, authKeyHandler);
+        using AuthUserViaGoogleHandlerT =
+            AuthUserViaGoogleHandler<AuthKeyHandlerT, UserUpdatableStorageT>;
+        auto self = std::shared_ptr<AuthUserViaGoogleHandlerT>(
+            new AuthUserViaGoogleHandlerT(messageBus, userStorage, authKeyHandler));
 
-        self.getMessageBus().template registerHandler<AuthUserViaGoogleCommand>(
+        self->getMessageBus().template registerHandler<AuthUserViaGoogleCommand>(
             self, &AuthUserViaGoogleHandlerT::execute);
         return self;
     }
@@ -66,14 +69,14 @@ namespace Service::User
 
         template <Port::User::AuthKeyHandlerC InnerAuthKeyHandlerT,
                   Port::User::UserUpdatableStorageC InnerUserUpdatableStorageT>
-        friend AuthUserViaGoogleHandler<InnerAuthKeyHandlerT, InnerUserUpdatableStorageT> Service::
-            User::makeAuthUserViaGoogleHandler(Service::MessageBus& messageBus,
-                                               InnerUserUpdatableStorageT& userStorage,
-                                               InnerAuthKeyHandlerT& authKeyHandler);
+        friend std::shared_ptr<AuthUserViaGoogleHandler<InnerAuthKeyHandlerT, InnerUserUpdatableStorageT>>
+        Service::User::makeAuthUserViaGoogleHandler(Service::MessageBus& messageBus,
+                                                    InnerUserUpdatableStorageT& userStorage,
+                                                    InnerAuthKeyHandlerT& authKeyHandler);
 
     public:
         std::expected<AuthUserViaGoogleCommand::Result, AuthUserViaGoogleCommand::Error> execute(
-        const AuthUserViaGoogleCommand& command)
+            const AuthUserViaGoogleCommand& command)
         {
             /** Handle auth keys */
             typename AuthKeyHandlerT::KeyDtoT keyDto;
@@ -81,8 +84,8 @@ namespace Service::User
             keyDto.codeVerifier = command.codeVerifier;
             keyDto.redirectUri = command.redirectUri;
 
-            const std::expected<Port::User::AuthKeyHandlerResult, Port::User::AuthKeyHandlerError> authKeyHandlerResult
-                = getAuthKeyHandler().handle(keyDto);
+            const std::expected<Port::User::AuthKeyHandlerResult, Port::User::AuthKeyHandlerError>
+                authKeyHandlerResult = getAuthKeyHandler().handle(keyDto);
             if (!authKeyHandlerResult)
             {
                 return std::unexpected(authKeyHandlerResult.error());
@@ -91,10 +94,7 @@ namespace Service::User
             /** Check on user exsistance */
             if (const auto user = getUserStorage().findByEmail(authKeyHandlerResult->email))
             {
-                return AuthUserViaGoogleResult{
-                    .userId = user->getId(),
-                    .bAlreadyRegistered = true
-                };
+                return AuthUserViaGoogleResult{.userId = user->getId(), .bAlreadyRegistered = true};
             }
 
             /** Adding new user */
@@ -107,19 +107,19 @@ namespace Service::User
 
             return getUserStorage()
                 .add(user)
-                .transform([&]
-                {
-                    uow.commit();
-                    return AuthUserViaGoogleResult{
-                        .userId = user.getId(),
-                        .bAlreadyRegistered = false
-                    };
-                })
-                .transform_error([&](auto&& error)
-                {
-                    uow.rollback();
-                    return Error::MutStrError(error);
-                });
+                .transform(
+                    [&]
+                    {
+                        uow.commit();
+                        return AuthUserViaGoogleResult{.userId = user.getId(),
+                                                       .bAlreadyRegistered = false};
+                    })
+                .transform_error(
+                    [&](auto&& error)
+                    {
+                        uow.rollback();
+                        return Error::MutStrError(error);
+                    });
         }
 
     protected:

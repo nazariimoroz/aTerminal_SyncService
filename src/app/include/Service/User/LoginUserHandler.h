@@ -17,7 +17,7 @@ namespace Service::User
     class LoginUserHandler;
 
     template <Port::User::UserStorageC UserStorageT>
-    LoginUserHandler<UserStorageT> makeLoginUserHandler(
+    std::shared_ptr<LoginUserHandler<UserStorageT>> makeLoginUserHandler(
         Service::MessageBus& messageBus, UserStorageT& userStorage,
         Util::Crypto::PasswordHasher& passwordHasher);
 }
@@ -53,7 +53,7 @@ namespace Service::User
         LoginUserHandler(LoginUserHandler&&);
 
         template <Port::User::UserStorageC InnerUserStorageT>
-        friend LoginUserHandler<InnerUserStorageT> Service::User::makeLoginUserHandler(
+        friend std::shared_ptr<LoginUserHandler<UserStorageT>> Service::User::makeLoginUserHandler(
             Service::MessageBus& messageBus, InnerUserStorageT& userStorage,
             Util::Crypto::PasswordHasher& passwordHasher);
 

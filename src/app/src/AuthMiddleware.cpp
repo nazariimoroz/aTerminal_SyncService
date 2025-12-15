@@ -19,7 +19,11 @@ std::expected<AuthMiddlewareResult, AuthFailedError> AuthMiddleware::execute(
     auto authToken = std::invoke(
         [&]() -> std::expected<std::string, AuthFailedError>
         {
-            auto token = request.get("Authorization");
+            auto token = request.get("Authorization", "");
+            if (token.empty())
+            {
+                return std::unexpected(AuthFailedError());
+            }
 
             static std::string bearer = "Bearer ";
             if (!Poco::startsWith(token, bearer))
@@ -27,7 +31,7 @@ std::expected<AuthMiddlewareResult, AuthFailedError> AuthMiddleware::execute(
                 return std::unexpected(AuthFailedError());
             }
 
-            token = token.erase(bearer.size());
+            token = token.erase(0, bearer.size());
 
             return token;
         });
@@ -41,7 +45,10 @@ std::expected<AuthMiddlewareResult, AuthFailedError> AuthMiddleware::execute(
             return getMessageBus().call(retrieveIdCommand)
                 .transform_error([](auto&& error){ return AuthFailedError(); });
         });
-    if (!verifyResult) return std::unexpected(verifyResult.error());
+    if (!verifyResult)
+    {
+        return std::unexpected(verifyResult.error());
+    }
 
     return AuthMiddlewareResult{.id = verifyResult->id};
 }

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Rest/RequestRouter.h"
-
 #include <Poco/JSON/Object.h>
 #include <Poco/Net/HTTPServerRequest.h>
 #include <Poco/URI.h>

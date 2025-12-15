@@ -52,7 +52,7 @@ namespace Utils
     requires TuplePredicateC<FunT, TupleT>
     constexpr void TupleForEachWithContinue(const TupleT& t, FunT&& f) {
         std::apply([&](auto&&... xs) {
-            ( std::invoke(f, std::forward<decltype(xs)>(xs)) || ... );
+            ( (!std::invoke(f, std::forward<decltype(xs)>(xs))) || ... );
         }, t);
     }
 }

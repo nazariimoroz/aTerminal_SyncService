@@ -8,6 +8,7 @@ add_library(${PROJECT_NAME} STATIC ${HDR} ${SRC})
 target_link_libraries(${PROJECT_NAME}
         PRIVATE
 
+        reflectcpp::reflectcpp
         sodium::sodium
         Poco::Foundation
         Poco::Util

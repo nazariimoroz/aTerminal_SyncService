@@ -20,7 +20,7 @@ namespace Service::User
     class RegisterUserHandler;
 
     template <Port::User::UserUpdatableStorageC UserUpdatableStorageT>
-    RegisterUserHandler<UserUpdatableStorageT> makeRegisterUserHandler(
+    std::shared_ptr<RegisterUserHandler<UserUpdatableStorageT>> makeRegisterUserHandler(
         Service::MessageBus& messageBus, UserUpdatableStorageT& userStorage,
         Util::Crypto::PasswordHasher& passwordHasher);
 }
@@ -51,7 +51,7 @@ namespace Service::User
         RegisterUserHandler(RegisterUserHandler&&);
 
         template <Port::User::UserUpdatableStorageC InnerUserUpdatableStorageT>
-        friend RegisterUserHandler<InnerUserUpdatableStorageT> Service::User::makeRegisterUserHandler(
+        friend std::shared_ptr<RegisterUserHandler<UserUpdatableStorageT>> Service::User::makeRegisterUserHandler(
             Service::MessageBus& messageBus, InnerUserUpdatableStorageT& userStorage,
             Util::Crypto::PasswordHasher& passwordHasher);
 

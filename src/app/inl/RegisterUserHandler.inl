@@ -1,14 +1,5 @@
 #pragma once
 
-#include "Service/User/RegisterUserHandler.h"
-
-#include <Poco/Logger.h>
-#include <stdexcept>
-#include "Util/Crypto/PasswordHasher.h"
-
-#include "Port/UnitOfWork.h"
-#include "Port/User/UserUpdatableStorage.h"
-#include "Service/MessageBus.h"
 
 namespace Service::User
 {
@@ -25,14 +16,14 @@ namespace Service::User
         default;
 
     template <Port::User::UserUpdatableStorageC UserUpdatableStorageT>
-    RegisterUserHandler<UserUpdatableStorageT> makeRegisterUserHandler(
+    std::shared_ptr<RegisterUserHandler<UserUpdatableStorageT>> makeRegisterUserHandler(
         Service::MessageBus& messageBus, UserUpdatableStorageT& userStorage,
         Util::Crypto::PasswordHasher& passwordHasher)
     {
         using RegisterUserHandlerT = RegisterUserHandler<UserUpdatableStorageT>;
-        auto self = RegisterUserHandlerT(messageBus, userStorage, passwordHasher);
+        auto self = std::shared_ptr<RegisterUserHandlerT>(new RegisterUserHandlerT(messageBus, userStorage, passwordHasher));
 
-        self.getMessageBus().template registerHandler<RegisterUserCommand>(self, &RegisterUserHandlerT::execute);
+        self->getMessageBus().template registerHandler<RegisterUserCommand>(self, &RegisterUserHandlerT::execute);
         return self;
     }
 

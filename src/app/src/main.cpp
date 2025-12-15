@@ -5,12 +5,16 @@
 #include <Poco/Util/ServerApplication.h>
 
 #include "Infra/GoogleAuthKeyHandler.h"
+#include "Infra/InMemoryPluginOptionStorage.h"
 #include "Infra/InMemoryUserStorage.h"
 #include "Rest/Controller/AuthController.h"
 #include "Rest/RequestRouter.h"
 #include "Rest/Resolver/AuthControllerResolver.h"
+#include "Rest/Resolver/PluginOptionsResolver.h"
 #include "Service/JwtHandler.h"
 #include "Service/MessageBus.h"
+#include "Service/Plugin/GetPluginOptionsHandler.h"
+#include "Service/Plugin/PostPluginOptionsHandler.h"
 #include "Service/User/AuthUserViaGoogleHandler.h"
 #include "Service/User/LoginUserHandler.h"
 #include "Service/User/RegisterUserHandler.h"
@@ -79,13 +83,15 @@ protected:
 
         /** Init Infra */
         auto userStorage = Infra::InMemoryUserStorage();
+        auto pluginOptionsStorage = Infra::InMemoryPluginOptionStorage();
         auto googleAuthKeyHandler = Infra::GoogleAuthKeyHandler(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRETS, logger());
 
         /** Init Services */
         auto messageBus = Service::MessageBus();
-        auto jwtHandler = Service::JwtHandler::make(JWT_SECRET, messageBus);
-        const auto authUserViaGoogleHandler =
-            Service::User::makeAuthUserViaGoogleHandler(messageBus, userStorage, googleAuthKeyHandler);
+        [[maybe_unused]] const auto jwtHandler = Service::makeJwtHandler(messageBus, userStorage, JWT_SECRET);
+        [[maybe_unused]] const auto authUserViaGoogleHandler = Service::User::makeAuthUserViaGoogleHandler(messageBus, userStorage, googleAuthKeyHandler);
+        [[maybe_unused]] const auto getPluginOptionsHandler = Service::Plugin::makeGetPluginOptionsHandler(messageBus, pluginOptionsStorage);
+        [[maybe_unused]] const auto postPluginOptionsHandler = Service::Plugin::makePostPluginOptionsHandler(messageBus, pluginOptionsStorage);
 
         /** Init REST Server */
         const auto restSoket = Poco::Net::ServerSocket(HTTP_PORT);
@@ -93,8 +99,13 @@ protected:
         restParams->setMaxQueued(64);
         restParams->setMaxThreads(4);
 
+        auto authMiddleware = Rest::Middleware::AuthMiddleware(messageBus);
+
         auto restControllerResolvers =
-            std::make_tuple(Rest::Resolver::AuthControllerResolver(messageBus, logger()));
+            std::make_tuple(
+                Rest::Resolver::AuthControllerResolver(messageBus, logger()),
+                Rest::Resolver::PluginOptionsResolver(authMiddleware, messageBus, logger())
+                );
 
         const auto restRequestRouter = new Rest::RequestRouter(
             restControllerResolvers, Rest::Resolver::NotFoundControllerResolver());

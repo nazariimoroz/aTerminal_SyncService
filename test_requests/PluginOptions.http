@@ -1,0 +1,6 @@
+### GET request to example server
+
+@host = http://localhost:12345
+
+GET {{host}}/api/v0/auth/plugin/options
+###

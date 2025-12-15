@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Service/User/LoginUserHandler.h"
 
 #include <optional>
 #include <stdexcept>
@@ -20,15 +19,14 @@ namespace Service::User
     }
 
     template <Port::User::UserStorageC UserStorageT>
-    LoginUserHandler<UserStorageT> makeLoginUserHandler(
+    std::shared_ptr<LoginUserHandler<UserStorageT>> makeLoginUserHandler(
         Service::MessageBus& messageBus, UserStorageT& userStorage,
         Util::Crypto::PasswordHasher& passwordHasher)
     {
         using LoginUserHandlerT = LoginUserHandler<UserStorageT>;
+        auto self = std::shared_ptr<LoginUserHandlerT>(new LoginUserHandlerT(messageBus, userStorage, passwordHasher));
 
-        auto self = LoginUserHandlerT(messageBus, userStorage, passwordHasher);
-
-        self.getMessageBus().template registerHandler<LoginUserCommand>(self, &LoginUserHandlerT::execute);
+        self->getMessageBus().template registerHandler<LoginUserCommand>(self, &LoginUserHandlerT::execute);
         return self;
     }
 
