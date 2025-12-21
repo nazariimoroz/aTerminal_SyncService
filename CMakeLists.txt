@@ -8,10 +8,12 @@ option(SYNC_SERVICE_ENABLE_TESTS "Build and run unit tests" ON)
 list(PREPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 find_package(Poco REQUIRED COMPONENTS Foundation Util Data Net JWT NetSSL)
-find_package(ReflectCpp REQUIRED)
+find_package(reflectcpp CONFIG REQUIRED)
 find_package(stduuid CONFIG REQUIRED)
 find_package(ctre CONFIG REQUIRED)
 find_package(unofficial-sodium CONFIG REQUIRED)
+find_package(SQLiteCpp CONFIG REQUIRED)
+find_package(Threads REQUIRED)
 add_library(sodium::sodium ALIAS unofficial-sodium::sodium)
 
 if(${SYNC_SERVICE_ENABLE_TESTS})

@@ -1,9 +1,0 @@
-{
-    "cmake.useCMakePresets": "always",
-    "cmake.useVsDeveloperEnvironment": "always",
-    "C_Cpp.intelliSenseEngine": "disabled",
-    "clangd.arguments": [ 
-        "--compile-commands-dir=${workspaceFolder}/out/build/GCC",
-        "--query-driver=/usr/bin/g++,/usr/bin/c++"
-    ],
-}

@@ -3,10 +3,13 @@
 #include <Poco/Net/ServerSocket.h>
 #include <Poco/Util/Application.h>
 #include <Poco/Util/ServerApplication.h>
+#include <SQLiteCpp/Database.h>
 
 #include "Infra/GoogleAuthKeyHandler.h"
 #include "Infra/InMemoryPluginOptionStorage.h"
 #include "Infra/InMemoryUserStorage.h"
+#include "Infra/SqlitePluginOptionStorage.h"
+#include "Infra/SqliteUserStorage.h"
 #include "Rest/Controller/AuthController.h"
 #include "Rest/RequestRouter.h"
 #include "Rest/Resolver/AuthControllerResolver.h"
@@ -16,8 +19,6 @@
 #include "Service/Plugin/GetPluginOptionsHandler.h"
 #include "Service/Plugin/PostPluginOptionsHandler.h"
 #include "Service/User/AuthUserViaGoogleHandler.h"
-#include "Service/User/LoginUserHandler.h"
-#include "Service/User/RegisterUserHandler.h"
 #include "Util/Crypto/PasswordHasher.h"
 
 class ApplicationMain final : public Poco::Util::ServerApplication
@@ -82,8 +83,15 @@ protected:
         auto passwordHasher = Util::Crypto::PasswordHasher();
 
         /** Init Infra */
-        auto userStorage = Infra::InMemoryUserStorage();
-        auto pluginOptionsStorage = Infra::InMemoryPluginOptionStorage();
+        SQLite::Database db("test.db", SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE);
+        db.exec("PRAGMA foreign_keys = ON;");
+        db.exec("PRAGMA busy_timeout = 5000;");
+        db.exec("PRAGMA journal_mode = WAL;");
+        db.exec("PRAGMA synchronous = NORMAL;");
+        db.exec("PRAGMA temp_store = MEMORY;");
+
+        auto userStorage = Infra::SqliteUserStorage(db);
+        auto pluginOptionsStorage = Infra::SqlitePluginOptionStorage(db);
         auto googleAuthKeyHandler = Infra::GoogleAuthKeyHandler(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRETS, logger());
 
         /** Init Services */
