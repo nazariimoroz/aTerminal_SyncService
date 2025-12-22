@@ -9,16 +9,16 @@
 
 namespace Infra
 {
-    class SqliteUserStorageUoW
+    class SqliteStorageUoW
     {
     public:
-        SqliteUserStorageUoW(SQLite::Database& db, std::recursive_mutex& mutex);
-        ~SqliteUserStorageUoW();
+        SqliteStorageUoW(SQLite::Database& db, std::recursive_mutex& mutex);
+        ~SqliteStorageUoW();
 
-        SqliteUserStorageUoW(const SqliteUserStorageUoW&) = delete;
-        SqliteUserStorageUoW& operator=(const SqliteUserStorageUoW&) = delete;
-        SqliteUserStorageUoW(SqliteUserStorageUoW&&) = delete;
-        SqliteUserStorageUoW& operator=(SqliteUserStorageUoW&&) = delete;
+        SqliteStorageUoW(const SqliteStorageUoW&) = delete;
+        SqliteStorageUoW& operator=(const SqliteStorageUoW&) = delete;
+        SqliteStorageUoW(SqliteStorageUoW&&) = delete;
+        SqliteStorageUoW& operator=(SqliteStorageUoW&&) = delete;
 
         void commit();
         void rollback();
@@ -36,5 +36,5 @@ namespace Infra
         bool _committed = false;
     };
 
-    static_assert(Port::UnitOfWorkC<SqliteUserStorageUoW>);
+    static_assert(Port::UnitOfWorkC<SqliteStorageUoW>);
 }

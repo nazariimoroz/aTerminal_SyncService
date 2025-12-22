@@ -9,7 +9,7 @@
 
 #include <SQLiteCpp/SQLiteCpp.h>
 
-#include "Infra/SqliteUserStorageUoW.h"
+#include "Infra/SqliteStorageUoW.h"
 #include "Port/User/UserUpdatableStorage.h"
 
 namespace Infra
@@ -25,7 +25,7 @@ namespace Infra
         std::expected<void, Port::User::EmailAlreadyRegisteredError> add(Domain::User& user);
         void update(const Domain::User& user);
 
-        SqliteUserStorageUoW beginWork();
+        SqliteStorageUoW beginWork();
 
     private:
         void ensureSchema();

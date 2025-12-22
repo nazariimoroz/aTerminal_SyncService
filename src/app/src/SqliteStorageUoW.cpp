@@ -1,8 +1,8 @@
-#include "Infra/SqliteUserStorageUoW.h"
+#include "Infra/SqliteStorageUoW.h"
 
 namespace Infra
 {
-    SqliteUserStorageUoW::SqliteUserStorageUoW(SQLite::Database& db, std::recursive_mutex& mutex)
+    SqliteStorageUoW::SqliteStorageUoW(SQLite::Database& db, std::recursive_mutex& mutex)
         : _db(&db)
         , _lock(mutex)
         , _tx(std::make_unique<SQLite::Transaction>(db))
@@ -11,7 +11,7 @@ namespace Infra
     {
     }
 
-    SqliteUserStorageUoW::~SqliteUserStorageUoW()
+    SqliteStorageUoW::~SqliteStorageUoW()
     {
         std::lock_guard<std::mutex> g(_mutex);
         if (!_active)
@@ -22,7 +22,7 @@ namespace Infra
         _committed = false;
     }
 
-    void SqliteUserStorageUoW::commit()
+    void SqliteStorageUoW::commit()
     {
         std::lock_guard<std::mutex> g(_mutex);
         if (!_active || !_tx)
@@ -38,7 +38,7 @@ namespace Infra
             _lock.unlock();
     }
 
-    void SqliteUserStorageUoW::rollback()
+    void SqliteStorageUoW::rollback()
     {
         std::lock_guard<std::mutex> g(_mutex);
         if (!_active || !_tx)
@@ -54,13 +54,13 @@ namespace Infra
             _lock.unlock();
     }
 
-    bool SqliteUserStorageUoW::isActive() const
+    bool SqliteStorageUoW::isActive() const
     {
         std::lock_guard<std::mutex> g(_mutex);
         return _active;
     }
 
-    bool SqliteUserStorageUoW::isCommitted() const
+    bool SqliteStorageUoW::isCommitted() const
     {
         std::lock_guard<std::mutex> g(_mutex);
         return _committed;

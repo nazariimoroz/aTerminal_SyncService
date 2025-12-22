@@ -216,9 +216,9 @@ namespace Infra
         sp.release();
     }
 
-    SqliteUserStorageUoW SqliteUserStorage::beginWork()
+    SqliteStorageUoW SqliteUserStorage::beginWork()
     {
-        return SqliteUserStorageUoW(*_db, _mutex);
+        return SqliteStorageUoW(*_db, _mutex);
     }
 }
 

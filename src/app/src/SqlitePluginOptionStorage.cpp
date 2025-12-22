@@ -1,4 +1,3 @@
-// Infra/SqlitePluginOptionStorage.cpp
 #include "Infra/SqlitePluginOptionStorage.h"
 
 namespace Infra
@@ -234,7 +233,7 @@ namespace Infra
         sp.release();
     }
 
-    SqlitePluginOptionStorageUoW SqlitePluginOptionStorage::beginWork()
+    SqliteStorageUoW SqlitePluginOptionStorage::beginWork()
     {
         return { *_db, _mutex };
     }

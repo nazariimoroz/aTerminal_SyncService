@@ -8,7 +8,7 @@
 #include <SQLiteCpp/SQLiteCpp.h>
 
 #include "Domain/PluginOptions.h"
-#include "Infra/SqlitePluginOptionStorageUoW.h"
+#include "Infra/SqliteStorageUoW.h"
 #include "Port/Plugin/PluginOptionsStorage.h"
 #include "Port/Plugin/PluginOptionsUpdateableStorage.h"
 
@@ -24,7 +24,7 @@ namespace Infra
 
         void update(const Domain::PluginOptions& po);
 
-        SqlitePluginOptionStorageUoW beginWork();
+        SqliteStorageUoW beginWork();
 
     private:
         void ensureSchema();
